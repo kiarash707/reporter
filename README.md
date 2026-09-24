@@ -1,128 +1,286 @@
-# Telegram Temporary Email Bot
+# Telegram Reporter Bot
 
-A Node.js Telegram bot for managing temporary email accounts and inboxes through Telegram.
+ربات مدیریت و اجرای عملیات گزارش در تلگرام با رابط مدیریتی فارسی/انگلیسی.
 
-## ⚠️ Security
+این پروژه یک ربات Python/Telethon است که بخش‌های مدیریتی، مدیریت حساب‌ها و Sessionها، SMTP، عملیات گزارش و گزارش وضعیت عملیات را در یک پنل تلگرامی جمع می‌کند.
 
-**Never commit a real Telegram bot token, API key, password, session, or private runtime data.**
+> **نکته:** فایل سورس اصلی این نسخه باید دقیقاً همان فایل دریافت‌شده از پروژه باشد و نباید برای اجرای پروژه به‌صورت دستی بازنویسی شود.
 
-The original uploaded source contained hard-coded sensitive values. They must not be stored in Git history. This repository therefore uses environment variables for secrets.
+## قابلیت‌ها
 
-If a real bot token was ever committed to any Git repository, rotate it through **@BotFather** before using the project again.
+### SMTP / Email
+- افزودن چند SMTP جیمیل با App Password
+- تست اتصال SMTP
+- فعال/غیرفعال کردن فرستنده‌ها
+- ارسال تکی و گروهی
 
-## Requirements
+### Telegram Reporter
+- ریپورت کانال/گروه
+- ریپورت پست
+- ریپورت پروفایل
+- ریپورت ربات
+- ریپورت اکانت
+- ریپورت دستی
+- انتخاب نوع دلیل گزارش
+- تنظیم تأخیر بین عملیات
+- امکان مدیریت Join اجباری قبل از عملیات
 
-- Node.js 18+ recommended
-- npm
-- A Telegram bot token
-- Telegram user ID(s) for administrators
+### مدیریت Session
+- ذخیره Session برای هر ادمین در پوشه اختصاصی
+- نمایش حساب‌ها و شماره‌ها
+- اشتراک Session بین مالک و ادمین‌ها
+- مدیریت Sessionهای مشترک
+- پشتیبانی از چند حساب
 
-## Installation
+### مدیریت کاربران و ادمین‌ها
+- افزودن ادمین
+- تمدید اشتراک ادمین
+- حذف ادمین
+- افزودن مالک جدید
+- مشاهده وضعیت انقضای ادمین‌ها
+- مدیریت کانال اجباری
+- تیکت پشتیبانی و مدیریت کاربران
 
-```bash
-git clone https://github.com/kiarash707/reporter.git
-cd reporter
-npm install
-```
+### گزارش عملیات
+- نمایش وضعیت عملیات
+- درصد پیشرفت
+- زمان سپری‌شده و زمان تخمینی
+- نمایش موفق/ناموفق
+- مشاهده حساب‌های موفق و ناموفق
+- گزارش پایان عملیات برای مالک
+- آمار کلی ربات
+- ریست آمار/گزارش‌ها
 
-Create the environment file:
+## تکنولوژی
 
-```bash
-cp .env.example .env
-```
+- Python 3.10+
+- Telethon
+- asyncio
+- SMTP
+- pytz
+- JSON-based local data
 
-Edit `.env`:
-
-```env
-BOT_TOKEN=YOUR_BOT_TOKEN_HERE
-ADMIN_IDS=YOUR_TELEGRAM_USER_ID_HERE
-```
-
-Start:
-
-```bash
-npm start
-```
-
-## Configuration
-
-### BOT_TOKEN
-
-Create/manage the bot with Telegram's **@BotFather** and place the token in `.env`.
-
-### ADMIN_IDS
-
-Set one or more numeric Telegram user IDs separated by commas:
-
-```env
-ADMIN_IDS=123456789,987654321
-```
-
-Do not put usernames in this variable.
-
-## Runtime data
-
-The application can create local runtime data such as:
-
-- `Accounts/`
-- `Accounts/mails/`
-- `Backups/`
-- `BannedUsers/`
-- `bot_settings.json`
-
-These paths are intentionally excluded from Git by `.gitignore`.
-
-## Project structure
+## ساختار پیشنهادی
 
 ```text
-.
-├── gmasaz.js
-├── package.json
-├── .env.example
-├── .gitignore
+reporter/
+├── main.py                 # سورس اصلی ربات
+├── requirements.txt        # وابستگی‌های Python
+├── README.md
 ├── CHANGELOG.md
-└── README.md
+├── .gitignore
+└── docs/
+    ├── INSTALL_UBUNTU.md
+    ├── CONFIGURATION.md
+    └── TROUBLESHOOTING.md
 ```
 
-## Troubleshooting
+نام فایل سورس را می‌توانید مطابق نام فایل اصلی پروژه نگه دارید؛ در آموزش‌های این مخزن از `main.py` به‌عنوان نام نمونه استفاده شده است.
 
-### Bot does not start
+## پیش‌نیاز
 
-Check:
+برای اجرای روی Ubuntu Server:
 
-1. Node.js is installed: `node --version`
-2. Dependencies are installed: `npm install`
-3. `.env` exists.
-4. `BOT_TOKEN` is set.
-5. The token is valid and has not been revoked.
+- Ubuntu 22.04 / 24.04 / 26.04
+- Python 3
+- pip
+- دسترسی به Web Terminal یا SSH
+- اینترنت فعال روی سرور
+- اطلاعات Telegram API
+- Bot Token
+- مقادیر مالکین و تنظیمات موردنیاز خود سورس
 
-### No admin access
+## نصب سریع روی Ubuntu
 
-Verify that `ADMIN_IDS` contains your numeric Telegram user ID and that there are no accidental spaces or non-numeric values.
+### 1. آپدیت سیستم
 
-### Polling errors
+```bash
+apt update && apt upgrade -y
+```
 
-Check the terminal output for Telegram API errors. Make sure another running instance is not using the same bot token.
+### 2. نصب Python و ابزارهای لازم
 
-## Deployment
+```bash
+apt install -y python3 python3-pip python3-venv git
+```
 
-For a private VPS/Ubuntu deployment:
+بررسی:
+
+```bash
+python3 --version
+pip3 --version
+git --version
+```
+
+### 3. دریافت پروژه
 
 ```bash
 git clone https://github.com/kiarash707/reporter.git
 cd reporter
-npm install
-cp .env.example .env
-nano .env
-npm start
 ```
 
-For production, use a process manager such as systemd or PM2 and keep `.env` outside version control.
+اگر Repository خصوصی است، روش احراز هویت Git خودتان را استفاده کنید.
 
-## Development notes
+### 4. ساخت محیط مجازی
 
-The uploaded project is a single-file Node.js application. Before adding major features, consider separating configuration, Telegram handlers, email-provider integration, persistence, and administrative logic into dedicated modules.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 5. نصب وابستگی‌ها
+
+```pip
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 6. اجرای ربات
+
+اگر فایل اصلی `main.py` است:
+
+```bash
+python3 main.py
+```
+
+اگر نام فایل اصلی متفاوت است، همان نام واقعی فایل را در دستور بالا قرار دهید.
+
+## اجرای دائمی
+
+برای اینکه بعد از بستن Web Terminal ربات متوقف نشود، از systemd استفاده کنید.
+
+فایل سرویس:
+
+```bash
+nano /etc/systemd/system/reporter.service
+```
+
+نمونه:
+
+```ini
+[Unit]
+Description=Telegram Reporter Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/reporter
+ExecStart=/opt/reporter/venv/bin/python /opt/reporter/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+سپس:
+
+```bash
+systemctl daemon-reload
+systemctl enable reporter
+systemctl start reporter
+```
+
+بررسی وضعیت:
+
+```bash
+systemctl status reporter
+```
+
+مشاهده لاگ:
+
+```bash
+journalctl -u reporter -f
+```
+
+توقف:
+
+```bash
+systemctl stop reporter
+```
+
+شروع مجدد:
+
+```bash
+systemctl restart reporter
+```
+
+## اطلاعات Telegram
+
+مقادیر مربوط به Telegram در سورس فعلی پروژه تعریف شده‌اند. قبل از اجرای نسخه شخصی خودتان، مقادیر موردنیاز فایل اصلی را بررسی و مقداردهی کنید.
+
+برای Telegram API معمولاً به:
+
+- API ID
+- API Hash
+- Bot Token
+- Owner ID
+
+نیاز است.
+
+Bot Token از BotFather و API ID/API Hash از Telegram API Development Tools دریافت می‌شود.
+
+## SMTP
+
+بخش SMTP پروژه از Gmail SMTP استفاده می‌کند.
+
+تنظیمات موردنیاز در خود پنل ربات قرار دارد. برای Gmail از App Password استفاده کنید و رمز اصلی حساب Gmail را جایگزین App Password نکنید.
+
+## Sessionها
+
+Sessionهای Telethon توسط برنامه مدیریت می‌شوند و برای حساب‌های مختلف در مسیرهای مخصوص ذخیره می‌شوند.
+
+پس از اولین ورود هر حساب، فایل Session مربوط به آن حساب توسط برنامه ایجاد/مدیریت خواهد شد.
+
+## عیب‌یابی سریع
+
+### ModuleNotFoundError
+
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### بررسی نصب Telethon
+
+```bash
+python3 -c "import telethon; print(telethon.__version__)"
+```
+
+### ربات اجرا می‌شود ولی پاسخ نمی‌دهد
+
+لاگ را ببینید:
+
+```bash
+journalctl -u reporter -n 100 --no-pager
+```
+
+### بررسی اجرای مستقیم
+
+قبل از systemd، برنامه را مستقیم اجرا کنید:
+
+```bash
+cd /opt/reporter
+source venv/bin/activate
+python3 main.py
+```
+
+هر خطای Python یا Telethon در همین مرحله واضح‌تر نمایش داده می‌شود.
+
+## آپدیت پروژه
+
+```bash
+cd /opt/reporter
+git pull
+source venv/bin/activate
+pip install -r requirements.txt
+systemctl restart reporter
+```
+
+## وضعیت پروژه
+
+نسخه حاضر برای اجرای ربات روی Linux Server مستند شده است. منطق اصلی برنامه باید در فایل سورس پروژه نگهداری شود و تغییرات کد مستقل از مستندات انجام شوند.
 
 ## License
 
-No license has been declared yet. Until a license is added by the project owner, the repository should be treated as **all rights reserved**.
+برای این پروژه هنوز License مشخصی اعلام نشده است.
