@@ -1,88 +1,97 @@
 # 🚀 Reporter Bot
 
-ربات Telegram Reporter با ساختار آماده برای اجرای پایدار روی سرور لینوکسی.
+ربات شخصی Telegram Reporter با ساختار آماده برای اجرای پایدار 24/7 روی سرور Linux Ubuntu 26.04.
 
+> این پروژه برای استفاده شخصی طراحی شده و نیازی به تنظیمات عمومی یا سرویس‌دهی به کاربران دیگر ندارد.
 
-# 🖥️ نصب روی Ubuntu 26.04 (راهنمای کامل 0 تا 100)
+---
 
-## 1. اتصال به سرور
+# 🖥️ نصب کامل روی Ubuntu 26.04 (وب ترمینال سرور)
 
-با SSH وارد سرور شوید:
+## 1. آپدیت سرور
 
-```bash
-ssh username@SERVER_IP
-```
-
-## 2. آپدیت سیستم
+در وب ترمینال سرور اجرا کنید:
 
 ```bash
 apt update && apt upgrade -y
 ```
 
-## 3. نصب ابزارهای مورد نیاز
+## 2. نصب ابزارهای لازم
 
 ```bash
 apt install git python3 python3-pip python3-venv curl -y
 ```
 
-## 4. دریافت پروژه
+## 3. دانلود پروژه
 
 ```bash
+cd /opt
 git clone https://github.com/kiarash707/reporter.git
 cd reporter
 ```
 
-## 5. ساخت محیط مجازی Python
+اگر پوشه قبلاً وجود داشت:
+
+```bash
+cd /opt/reporter
+git pull
+```
+
+## 4. ساخت محیط مجازی
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-## 6. نصب کتابخانه‌ها
+## 5. نصب کتابخانه‌ها
 
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 7. تنظیمات پروژه
+---
 
-اطلاعات حساس مانند Token ها، API Key ها و تنظیمات شخصی را در فایل‌های تنظیمات امن قرار دهید.
+# ⚙️ تنظیمات شخصی
 
-هرگز اطلاعات محرمانه را در GitHub عمومی قرار ندهید.
+اطلاعات حساس را داخل فایل‌های عمومی GitHub قرار ندهید.
+
+قبل از اجرا تنظیمات مورد نیاز پروژه را وارد کنید.
 
 ---
 
-# ▶️ اجرای تستی
+# ▶️ تست اولیه اجرا
 
 ```bash
+source venv/bin/activate
 python3 main.py
 ```
 
-اگر بدون خطا اجرا شد، آماده اجرای دائمی است.
+اگر بدون خطا اجرا شد، با `CTRL+C` متوقف کنید و مرحله سرویس دائمی را انجام دهید.
 
 ---
 
-# ⚙️ اجرای دائمی با Systemd
+# 🔥 اجرای دائمی 24/7 با Systemd
 
-یک سرویس بسازید:
+ساخت سرویس:
 
 ```bash
 nano /etc/systemd/system/reporter.service
 ```
 
-نمونه:
+محتوا:
 
 ```ini
 [Unit]
-Description=Reporter Bot
+Description=Personal Reporter Bot
 After=network.target
 
 [Service]
 WorkingDirectory=/opt/reporter
-ExecStart=/opt/reporter/venv/bin/python3 main.py
+ExecStart=/opt/reporter/venv/bin/python3 /opt/reporter/main.py
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
@@ -96,70 +105,71 @@ systemctl enable reporter
 systemctl start reporter
 ```
 
-بررسی وضعیت:
+---
+
+# 📌 دستورات مدیریت ربات
+
+وضعیت:
 
 ```bash
 systemctl status reporter
 ```
 
-مشاهده لاگ زنده:
-
-```bash
-journalctl -u reporter -f
-```
-
----
-
-# 🔄 دستورات مدیریت
-
 شروع:
+
 ```bash
 systemctl start reporter
 ```
 
 توقف:
+
 ```bash
 systemctl stop reporter
 ```
 
 ری‌استارت:
+
 ```bash
 systemctl restart reporter
 ```
 
----
-
-# 🛡️ امنیت سرور
-
-- اطلاعات حساس را داخل GitHub قرار ندهید.
-- از Session و فایل‌های دیتا بکاپ بگیرید.
-- دسترسی فایل‌ها را محدود کنید.
-- سیستم‌عامل را همیشه به‌روز نگه دارید.
-
----
-
-# 📂 ساختار پیشنهادی Production
-
-```
-reporter/
-├── main.py
-├── requirements.txt
-├── venv/
-├── data/
-├── logs/
-├── config/
-└── README.md
-```
-
----
-
-# 🧰 عیب‌یابی
-
-مشاهده لاگ:
+لاگ زنده:
 
 ```bash
-journalctl -u reporter --no-pager -n 100
+journalctl -u reporter -f
 ```
+
+آخرین خطاها:
+
+```bash
+journalctl -u reporter -n 100 --no-pager
+```
+
+---
+
+# 🔄 آپدیت نسخه جدید
+
+```bash
+cd /opt/reporter
+systemctl stop reporter
+git pull
+source venv/bin/activate
+pip install -r requirements.txt
+systemctl start reporter
+```
+
+---
+
+# 🛡️ نکات مهم سرور
+
+- فایل‌های حساس را در GitHub قرار ندهید.
+- از session و data بکاپ بگیرید.
+- دسترسی فایل‌ها را محدود کنید.
+- قبل از تغییرات بزرگ بکاپ بگیرید.
+
+---
+
+# 🧰 رفع مشکلات رایج
 
 بررسی Python:
 
@@ -167,12 +177,34 @@ journalctl -u reporter --no-pager -n 100
 python3 --version
 ```
 
-بررسی نصب پکیج‌ها:
+بررسی پکیج‌ها:
 
 ```bash
 pip list
 ```
 
+بررسی سرویس:
+
+```bash
+systemctl status reporter
+```
+
 ---
 
-ساخته شده برای استقرار پایدار روی Linux Ubuntu 26.04.
+# ✅ نصب سریع بعد از آماده بودن سرور
+
+```bash
+cd /opt
+git clone https://github.com/kiarash707/reporter.git
+cd reporter
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 main.py
+```
+
+پس از تست موفق، Systemd را فعال کنید.
+
+---
+
+ساخته شده برای اجرای پایدار شخصی روی Ubuntu 26.04.
