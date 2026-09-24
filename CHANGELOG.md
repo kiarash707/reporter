@@ -1,13 +1,11 @@
 # Changelog
 
-All notable project changes are documented here.
-
 ## 1.0.0
 
-- Initial project version.
-- Telegram bot runtime based on Node.js.
-- Temporary email management features.
-- User statistics and administrative controls.
-- Runtime data kept outside Git via .gitignore.
+- انتقال مستندات Repository به پروژه Telegram Reporter.
+- مستندسازی قابلیت‌های SMTP، Telegram Reporter، مدیریت Session، ادمین‌ها و گزارش وضعیت.
+- اضافه شدن راهنمای نصب و اجرای Ubuntu Server.
+- اضافه شدن راهنمای اجرای مستقیم و systemd.
+- تعریف وابستگی‌های Python در requirements.txt.
 
-> This changelog describes the uploaded project version; it does not imply that every feature described elsewhere is implemented.
+> منطق و سورس اصلی برنامه در این نسخه نباید توسط مستندات تغییر داده شود.
