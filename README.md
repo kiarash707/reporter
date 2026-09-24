@@ -2,27 +2,32 @@
 
 ربات شخصی Telegram Reporter با ساختار آماده برای اجرای پایدار 24/7 روی سرور Linux Ubuntu 26.04.
 
-> این پروژه برای استفاده شخصی طراحی شده و نیازی به تنظیمات عمومی یا سرویس‌دهی به کاربران دیگر ندارد.
+> این پروژه برای استفاده شخصی طراحی شده و برای سرویس‌دهی عمومی نیست.
 
 ---
 
-# 🖥️ نصب کامل روی Ubuntu 26.04 (وب ترمینال سرور)
+# 🖥️ نصب کامل روی Ubuntu 26.04 (Web Terminal)
 
-## 1. آپدیت سرور
+این راهنما برای سرورهایی است که از Web Terminal استفاده می‌کنند.
+تمام دستورها را به ترتیب اجرا کنید.
 
-در وب ترمینال سرور اجرا کنید:
+## 1) آماده‌سازی سرور
 
 ```bash
 apt update && apt upgrade -y
+apt install git python3 python3-pip python3-venv curl nano -y
 ```
 
-## 2. نصب ابزارهای لازم
+بررسی نصب:
 
 ```bash
-apt install git python3 python3-pip python3-venv curl -y
+python3 --version
+git --version
 ```
 
-## 3. دانلود پروژه
+---
+
+# 📥 دریافت پروژه
 
 ```bash
 cd /opt
@@ -30,45 +35,69 @@ git clone https://github.com/kiarash707/reporter.git
 cd reporter
 ```
 
-اگر پوشه قبلاً وجود داشت:
+اگر پروژه قبلاً نصب شده:
 
 ```bash
 cd /opt/reporter
 git pull
 ```
 
-## 4. ساخت محیط مجازی
+---
+
+# 🐍 ساخت محیط Python
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-## 5. نصب کتابخانه‌ها
+اگر خطای venv گرفتید:
+
+```bash
+apt install python3-venv -y
+python3 -m venv venv
+```
+
+---
+
+# 📦 نصب وابستگی‌ها
 
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+اگر خطای نصب پکیج داشتید:
+
+```bash
+pip install --upgrade setuptools wheel
+pip install -r requirements.txt
+```
+
 ---
 
-# ⚙️ تنظیمات شخصی
+# ⚙️ تنظیمات پروژه
 
-اطلاعات حساس را داخل فایل‌های عمومی GitHub قرار ندهید.
+اطلاعات حساس مثل Token، API Key و Session را داخل GitHub عمومی قرار ندهید.
 
 قبل از اجرا تنظیمات مورد نیاز پروژه را وارد کنید.
 
 ---
 
-# ▶️ تست اولیه اجرا
+# ▶️ تست اولیه
 
 ```bash
 source venv/bin/activate
 python3 main.py
 ```
 
-اگر بدون خطا اجرا شد، با `CTRL+C` متوقف کنید و مرحله سرویس دائمی را انجام دهید.
+اگر بدون خطا اجرا شد:
+
+```bash
+CTRL+C
+```
+
+و به مرحله سرویس بروید.
 
 ---
 
@@ -80,7 +109,7 @@ python3 main.py
 nano /etc/systemd/system/reporter.service
 ```
 
-محتوا:
+قرار دهید:
 
 ```ini
 [Unit]
@@ -97,7 +126,7 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-فعال‌سازی:
+ذخیره و فعال‌سازی:
 
 ```bash
 systemctl daemon-reload
@@ -107,7 +136,7 @@ systemctl start reporter
 
 ---
 
-# 📌 دستورات مدیریت ربات
+# 📌 مدیریت ربات
 
 وضعیت:
 
@@ -142,12 +171,12 @@ journalctl -u reporter -f
 آخرین خطاها:
 
 ```bash
-journalctl -u reporter -n 100 --no-pager
+journalctl -u reporter -n 200 --no-pager
 ```
 
 ---
 
-# 🔄 آپدیت نسخه جدید
+# 🔄 آپدیت پروژه
 
 ```bash
 cd /opt/reporter
@@ -160,30 +189,45 @@ systemctl start reporter
 
 ---
 
-# 🛡️ نکات مهم سرور
-
-- فایل‌های حساس را در GitHub قرار ندهید.
-- از session و data بکاپ بگیرید.
-- دسترسی فایل‌ها را محدود کنید.
-- قبل از تغییرات بزرگ بکاپ بگیرید.
-
----
-
 # 🧰 رفع مشکلات رایج
 
-بررسی Python:
+## سرویس اجرا نمی‌شود
 
 ```bash
-python3 --version
+systemctl status reporter
+journalctl -u reporter -n 100 --no-pager
 ```
 
-بررسی پکیج‌ها:
+## Permission denied
 
 ```bash
+chmod +x main.py
+chmod -R 755 /opt/reporter
+```
+
+## پایتون یا پکیج‌ها پیدا نمی‌شوند
+
+```bash
+which python3
+source /opt/reporter/venv/bin/activate
 pip list
 ```
 
-بررسی سرویس:
+## اجرای دستی برای تست خطا
+
+```bash
+cd /opt/reporter
+source venv/bin/activate
+python3 main.py
+```
+
+## ریبوت و بررسی اجرا
+
+```bash
+reboot
+```
+
+بعد از ورود:
 
 ```bash
 systemctl status reporter
@@ -191,7 +235,17 @@ systemctl status reporter
 
 ---
 
-# ✅ نصب سریع بعد از آماده بودن سرور
+# 💾 بکاپ پیشنهادی
+
+از فایل‌های مهم پروژه بکاپ بگیرید:
+
+```bash
+tar -czf reporter-backup.tar.gz /opt/reporter
+```
+
+---
+
+# ⚡ نصب سریع
 
 ```bash
 cd /opt
@@ -199,11 +253,12 @@ git clone https://github.com/kiarash707/reporter.git
 cd reporter
 python3 -m venv venv
 source venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 python3 main.py
 ```
 
-پس از تست موفق، Systemd را فعال کنید.
+بعد از تست موفق Systemd را فعال کنید.
 
 ---
 
