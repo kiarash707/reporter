@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "Telegram temporary email bot",
   "main": "gmasaz.js",
-  "scripts": {
-    "start": "node gmasaz.js"
-  },
+  "scripts": {"start": "node gmasaz.js", "check": "node --check gmasaz.js"},
+  "engines": {"node": ">=18"},
   "dependencies": {
-    "node-telegram-bot-api": "^0.66.0",
     "axios": "^1.7.7",
-    "moment": "^2.30.1"
+    "dotenv": "^16.4.5",
+    "moment": "^2.30.1",
+    "node-telegram-bot-api": "^0.66.0"
   }
 }
