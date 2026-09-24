@@ -1,0 +1,14 @@
+[Unit]
+Description=Reporter Bot Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/reporter
+ExecStart=/opt/reporter/venv/bin/python3 /opt/reporter/main.py
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/reporter/.env
+
+[Install]
+WantedBy=multi-user.target
