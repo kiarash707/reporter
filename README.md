@@ -1,70 +1,109 @@
 # 🚀 Reporter Bot
 
-ربات حرفه‌ای Telegram Reporter با پنل مدیریت، مدیریت ادمین‌ها، سشن‌ها، گزارش‌گیری و سیستم تنظیمات.
+ربات Telegram Reporter با ساختار آماده برای اجرای پایدار روی سرور لینوکسی.
 
-## ✨ امکانات
+## ✨ امکانات پروژه
 
-- پنل مالک و ادمین
-- سیستم مدیریت دسترسی
-- مدیریت Session های تلگرام
-- سیستم گزارش‌گیری و لاگ
-- پشتیبانی فارسی و انگلیسی
-- ذخیره اطلاعات JSON
-- اجرای دائمی روی سرور لینوکسی
+- اجرای دائمی روی Ubuntu Server
+- مدیریت تنظیمات و فایل‌های پروژه
+- نصب استاندارد Python Virtual Environment
+- مدیریت سرویس با Systemd
+- لاگ‌گیری و عیب‌یابی آسان
+- آماده‌سازی برای محیط Production
 
-## 📦 نصب روی Ubuntu 26.04 (صفر تا صد)
+---
 
-### 1) آپدیت سرور
+# 🖥️ نصب روی Ubuntu 26.04 (راهنمای کامل 0 تا 100)
+
+## 1. اتصال به سرور
+
+با SSH وارد سرور شوید:
+
 ```bash
-sudo apt update && sudo apt upgrade -y
+ssh username@SERVER_IP
 ```
 
-### 2) نصب پیش‌نیازها
+## 2. آپدیت سیستم
+
 ```bash
-sudo apt install python3 python3-pip python3-venv git -y
+apt update && apt upgrade -y
 ```
 
-### 3) دریافت پروژه
+## 3. نصب ابزارهای مورد نیاز
+
+```bash
+apt install git python3 python3-pip python3-venv curl -y
+```
+
+## 4. دریافت پروژه
+
 ```bash
 git clone https://github.com/kiarash707/reporter.git
 cd reporter
 ```
 
-### 4) ساخت محیط مجازی پایتون
+## 5. ساخت محیط مجازی Python
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 5) نصب کتابخانه‌ها
+## 6. نصب کتابخانه‌ها
+
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 6) تنظیم اطلاعات ربات
+## 7. تنظیمات پروژه
 
-اطلاعات حساس مانند API ID، API HASH و BOT TOKEN را داخل فایل تنظیمات قرار دهید.
-هرگز اطلاعات محرمانه را داخل GitHub عمومی قرار ندهید.
+اطلاعات حساس مانند Token ها، API Key ها و تنظیمات شخصی را در فایل‌های تنظیمات امن قرار دهید.
 
-### 7) اجرای تستی
+هرگز اطلاعات محرمانه را در GitHub عمومی قرار ندهید.
+
+---
+
+# ▶️ اجرای تستی
+
 ```bash
 python3 main.py
 ```
 
-## ⚙️ اجرای دائمی با Systemd
+اگر بدون خطا اجرا شد، آماده اجرای دائمی است.
 
-فایل سرویس را در مسیر زیر قرار دهید:
+---
 
-```
-/etc/systemd/system/reporter.service
-```
+# ⚙️ اجرای دائمی با Systemd
 
-سپس:
+یک سرویس بسازید:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable reporter
-sudo systemctl start reporter
+nano /etc/systemd/system/reporter.service
+```
+
+نمونه:
+
+```ini
+[Unit]
+Description=Reporter Bot
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/reporter
+ExecStart=/opt/reporter/venv/bin/python3 main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+فعال‌سازی:
+
+```bash
+systemctl daemon-reload
+systemctl enable reporter
+systemctl start reporter
 ```
 
 بررسی وضعیت:
@@ -73,36 +112,77 @@ sudo systemctl start reporter
 systemctl status reporter
 ```
 
-نمایش لاگ‌ها:
+مشاهده لاگ زنده:
 
 ```bash
 journalctl -u reporter -f
 ```
 
-## 🔄 مدیریت ربات
+---
 
-ری‌استارت:
+# 🔄 دستورات مدیریت
+
+شروع:
 ```bash
-sudo systemctl restart reporter
+systemctl start reporter
 ```
 
 توقف:
 ```bash
-sudo systemctl stop reporter
+systemctl stop reporter
 ```
 
-## 🛡️ نکات امنیتی
-
-- توکن ربات را عمومی نکنید.
-- Session های تلگرام را محافظت کنید.
-- دسترسی فایل‌ها را محدود کنید.
-- قبل از تغییرات بکاپ بگیرید.
-
-## 📁 فایل‌های دیتا
-
-فایل‌های ساخته شده توسط ربات شامل اطلاعات کاربران، تنظیمات و Session ها هستند.
-قبل از حذف پروژه از آن‌ها بکاپ تهیه کنید.
+ری‌استارت:
+```bash
+systemctl restart reporter
+```
 
 ---
 
-ساخته شده برای اجرای پایدار روی سرورهای Linux Ubuntu 26.04.
+# 🛡️ امنیت سرور
+
+- اطلاعات حساس را داخل GitHub قرار ندهید.
+- از Session و فایل‌های دیتا بکاپ بگیرید.
+- دسترسی فایل‌ها را محدود کنید.
+- سیستم‌عامل را همیشه به‌روز نگه دارید.
+
+---
+
+# 📂 ساختار پیشنهادی Production
+
+```
+reporter/
+├── main.py
+├── requirements.txt
+├── venv/
+├── data/
+├── logs/
+├── config/
+└── README.md
+```
+
+---
+
+# 🧰 عیب‌یابی
+
+مشاهده لاگ:
+
+```bash
+journalctl -u reporter --no-pager -n 100
+```
+
+بررسی Python:
+
+```bash
+python3 --version
+```
+
+بررسی نصب پکیج‌ها:
+
+```bash
+pip list
+```
+
+---
+
+ساخته شده برای استقرار پایدار روی Linux Ubuntu 26.04.
