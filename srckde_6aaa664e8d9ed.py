@@ -31,14 +31,14 @@ from telethon.tl.types import (
     PeerUser
 )
 
-API_ID = 21991530
-API_HASH = "6fedb4494836743356f1624c1e6377ae"
-BOT_TOKEN = "توکن "
-SUPPORT_USERNAME = "@Nullo_404"
+API_ID = 27786760
+API_HASH = "572e48bb7059438ed4e04c572e251f98"
+BOT_TOKEN = "8648562521:AAHtF7Lf7naGFUODcck8YYx8TaFaG-cN-no"
+SUPPORT_USERNAME = "@Zyrex_OR"
 OWNER_IDS = [8806549778,7172066915,7248348866]
 
 # ====== گروه گزارشات ======
-REPORT_GROUP_ID = آیدی عددی گروه گزارشات#
+REPORT_GROUP_ID = -1004497758593
 
 DATA_FILE = "datadfasr.json"
 ADMIN_SESSIONS_DIR = "admin_sessiorns1"
