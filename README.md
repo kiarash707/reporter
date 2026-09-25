@@ -40,7 +40,7 @@ one bot token, which is what Telegram's terms expect.
 | 🌍 **Bilingual** | Persian and English UI, per-user language, hot-reloadable JSON locale files |
 | 💾 **Storage** | SQLite (WAL) with versioned migrations, automatic backups with retention, atomic snapshots |
 | 🧰 **Operations** | `python -m bot run\|check\|backup\|migrate\|import-legacy`, one-shot installer, systemd unit, Dockerfile, Compose, `scripts/doctor.sh`, `scripts/update.sh` |
-| ✅ **Quality** | 160 unit tests, clean ruff lint/format and mypy, GitHub Actions CI on Python 3.10–3.12, Docker build check, plus `bash scripts/ci.sh` to run the whole pipeline locally |
+| ✅ **Quality** | 160 unit tests, clean ruff lint/format and mypy, GitHub Actions CI on Python 3.10–3.12, Docker build check, an end-to-end smoke test, plus `bash scripts/ci.sh` to run the whole pipeline locally |
 
 ## Quick install (60 seconds)
 
@@ -123,6 +123,7 @@ Architecture details and extension points: **[docs/architecture.md](docs/archite
 ## Operations
 
 ```bash
+bash scripts/smoke.sh         # end-to-end release check in a scratch copy
 bash scripts/doctor.sh        # paste-ready diagnostic report
 bash scripts/backup.sh        # timestamped archive in data/backups/
 bash scripts/update.sh        # backup → pull → deps → migrate → restart

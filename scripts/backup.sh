@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path.cwd()))
 
 from bot.config import load_settings
+from bot.errors import ConfigError
 from bot.services.backup import create_backup
 from bot.storage.database import Database
 from bot.storage.repository import Repository
@@ -39,7 +40,12 @@ keep = 7
 if "--keep" in sys.argv:
     keep = int(sys.argv[sys.argv.index("--keep") + 1])
 
-settings = load_settings()
+try:
+    settings = load_settings()
+except ConfigError as exc:
+    print(f"\u274c {exc}", file=sys.stderr)
+    print("   Create your configuration first:  cp .env.example .env  &&  nano .env", file=sys.stderr)
+    raise SystemExit(2) from None
 settings.prepare_directories()
 db = Database(settings.db_file)
 try:

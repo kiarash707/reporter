@@ -74,6 +74,10 @@ clean: ## Remove caches and build artefacts
 ci: ## Run every CI check locally (lint, format, tests, mypy, scripts)
 	bash scripts/ci.sh
 
+.PHONY: smoke
+smoke: ## End-to-end smoke test in a throwaway copy
+	bash scripts/smoke.sh
+
 .PHONY: ci-quick
 ci-quick: ## Fast local check: lint, format, tests
 	bash scripts/ci.sh --quick

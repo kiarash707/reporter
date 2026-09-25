@@ -14,13 +14,15 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT_DIR"
 
-FIX="no"; QUICK="no"; DOCKER="no"; MYPY="yes"
+FIX="no"; QUICK="no"; DOCKER="no"; MYPY="yes"; INSTALL_DEV="no"; SMOKE="no"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fix) FIX="yes"; shift ;;
     --quick) QUICK="yes"; shift ;;
     --docker) DOCKER="yes"; shift ;;
     --no-mypy) MYPY="no"; shift ;;
+    --install-dev) INSTALL_DEV="yes"; shift ;;
+    --smoke) SMOKE="yes"; shift ;;
     -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
@@ -41,17 +43,45 @@ pass() { printf '\033[32m  ✓ %s\033[0m\n' "$*"; }
 fail() { printf '\033[31m  ✗ %s\033[0m\n' "$*"; FAILED=1; }
 skip() { printf '\033[33m  – %s\033[0m\n' "$*"; }
 
+# ----------------------------------------------------------- development tools
+have_module() { "$PY" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$1') else 1)" 2>/dev/null; }
+
+TOOLS="pytest ruff mypy"
+MISSING=()
+for tool in $TOOLS; do have_module "$tool" || MISSING+=("$tool"); done
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  if [[ "$INSTALL_DEV" == "yes" ]]; then
+    step "Installing development dependencies"
+    "$PY" -m pip install --quiet -r requirements-dev.txt && pass "requirements-dev.txt installed" \
+      || { fail "pip install -r requirements-dev.txt"; exit 1; }
+    MISSING=()
+  else
+    printf '\n\033[33m! Missing development tools: %s\033[0m\n' "${MISSING[*]}"
+    echo "  The lint/test/type checks need them. Install once with:"
+    echo "      $PY -m pip install -r requirements-dev.txt      # or rerun: bash scripts/ci.sh --install-dev"
+    echo "  Continuing with the checks that do not need them."
+  fi
+fi
+have_tool() { [[ ${#MISSING[@]} -eq 0 ]] || ! printf '%s\n' "${MISSING[@]}" | grep -qx "$1"; }
+
 # ------------------------------------------------------------------- ruff lint
 step "Ruff (lint)"
-if [[ "$FIX" == "yes" ]]; then
-  "$PY" -m ruff check . --fix && pass "lint clean after autofix" || fail "ruff check"
+if ! have_tool ruff; then
+  skip "ruff is not installed (see above)"
 else
-  "$PY" -m ruff check . && pass "lint clean" || fail "ruff check"
+  if [[ "$FIX" == "yes" ]]; then
+    "$PY" -m ruff check . --fix && pass "lint clean after autofix" || fail "ruff check"
+  else
+    "$PY" -m ruff check . && pass "lint clean" || fail "ruff check"
+  fi
 fi
 
 # ------------------------------------------------------------------ ruff format
 step "Ruff (format)"
-if [[ "$FIX" == "yes" ]]; then
+if ! have_tool ruff; then
+  skip "ruff is not installed (see above)"
+elif [[ "$FIX" == "yes" ]]; then
   "$PY" -m ruff format . >/dev/null && pass "formatting applied"
 else
   "$PY" -m ruff format --check . && pass "formatting clean" || fail "ruff format --check"
@@ -59,7 +89,9 @@ fi
 
 # ------------------------------------------------------------------------- tests
 step "Tests"
-if [[ "$QUICK" == "yes" ]]; then
+if ! have_tool pytest; then
+  skip "pytest is not installed (see above)"
+elif [[ "$QUICK" == "yes" ]]; then
   "$PY" -m pytest -q && pass "tests passed" || fail "pytest"
 else
   "$PY" -m pytest --cov --cov-report=term-missing:skip-covered && pass "tests passed (coverage above)" || fail "pytest"
@@ -69,6 +101,8 @@ fi
 step "Mypy"
 if [[ "$MYPY" == "no" ]]; then
   skip "mypy skipped (--no-mypy)"
+elif ! have_tool mypy; then
+  skip "mypy is not installed (see above)"
 elif "$PY" -m mypy bot; then
   pass "no type errors"
 else
@@ -105,6 +139,12 @@ for path in sorted(set(files)):
         bad = 1
 sys.exit(bad)
 PY
+fi
+
+# ----------------------------------------------------------------- smoke test
+if [[ "$SMOKE" == "yes" ]]; then
+  step "Smoke test"
+  bash scripts/smoke.sh >/dev/null 2>&1 && pass "install -> check -> migrate -> backup verified" || fail "scripts/smoke.sh"
 fi
 
 # ---------------------------------------------------------------------- docker

@@ -11,7 +11,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 * CI pipeline (lint, format check, tests on Python 3.10–3.12, mypy, shell syntax,
   Docker build) and release pipeline (wheel/sdist + `ghcr.io` container image).
 * `scripts/ci.sh` (and `make ci`) — runs the complete pipeline locally, including
-  YAML validation and an optional Docker build.
+  YAML validation, an optional Docker build and the smoke test.
+* `scripts/smoke.sh` (and `make smoke`) — end-to-end release check in a throwaway
+  copy: version, configuration validation (valid *and* broken), migration, legacy
+  import, backup archive and package/context/locale wiring.
 * `AppContext.require_client()` — explicit Telegram client accessor that raises a
   domain error instead of an `AttributeError` when used before startup.
 * `bot.app.install_event_loop_policy()` — automatically uses `uvloop` when the

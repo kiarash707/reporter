@@ -38,7 +38,14 @@ bash scripts/ci.sh              # lint, format, tests+coverage, mypy, shell, YAM
 bash scripts/ci.sh --quick      # lint, format, tests only
 bash scripts/ci.sh --fix        # let ruff rewrite files instead of failing
 bash scripts/ci.sh --docker     # additionally build the container image
+bash scripts/ci.sh --install-dev  # install the dev tools first if they are missing
+bash scripts/smoke.sh           # end-to-end: install → check → migrate → import → backup
+bash scripts/ci.sh --smoke      # include the smoke test in the pipeline run
 ```
+
+On a production-only install (no dev dependencies) the script explains what is
+missing and still runs the checks that work, instead of failing with
+`No module named pytest`.
 
 The same steps are available through `make`: `make ci`, `make ci-quick`,
 `make lint`, `make fmt`, `make test`, `make cov`, `make typecheck`,
