@@ -1,9 +1,38 @@
-venv/
-__pycache__/
-*.pyc
+# --- secrets & runtime state (never commit) ---
 .env
+.env.*
+!.env.example
 *.session
 *.session-journal
-logs/
 data/
+logs/
+sessions/
 *.log
+*.json.tmp
+*.tar.gz
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+
+# --- editors / os ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

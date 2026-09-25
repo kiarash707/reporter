@@ -1,0 +1,44 @@
+# =============================================================================
+#  Telegram Community Bot - systemd unit (template)
+#  The installer fills in __WORKDIR__, __PYTHON__ and __USER__:
+#      sudo bash scripts/install.sh --service
+# =============================================================================
+[Unit]
+Description=Telegram Community Bot (telethon)
+Documentation=file://__WORKDIR__/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+WorkingDirectory=__WORKDIR__
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=__PYTHON__ -m bot run
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=reporter
+
+# --- hardening -------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+ReadWritePaths=__WORKDIR__
+
+[Install]
+WantedBy=multi-user.target

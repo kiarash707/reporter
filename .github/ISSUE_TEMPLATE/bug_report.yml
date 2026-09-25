@@ -1,0 +1,49 @@
+name: 🐞 Bug report
+description: Report something that does not work as expected
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please run `bash scripts/doctor.sh`
+        and attach the output (remove any secrets first).
+  - type: input
+    id: version
+    attributes:
+      label: Bot version
+      description: Output of `python -m bot --version`
+      placeholder: telegram-community-bot 2.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is the bot installed?
+      options:
+        - systemd service (scripts/install.sh --service)
+        - Docker / Docker Compose
+        - Manual (python -m bot run)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the exact commands and the observed result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: "`journalctl -u reporter -n 100 --no-pager` or the tail of logs/errors.log"
+      render: shell
+    validations:
+      required: false

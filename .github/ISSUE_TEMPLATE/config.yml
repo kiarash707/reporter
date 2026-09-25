@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/kiarash707/reporter/tree/main/docs
+    about: Installation, configuration, deployment and troubleshooting guides
+  - name: 🔐 Security report
+    url: https://github.com/kiarash707/reporter/security/advisories/new
+    about: Please report vulnerabilities privately
