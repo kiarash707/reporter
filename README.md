@@ -6,23 +6,67 @@
 
 ---
 
-# 🖥️ نصب کامل روی Ubuntu 26.04 (Web Terminal)
+# 🖥️ نصب مستقیم روی سرور Ubuntu
 
-این راهنما برای سرورهایی است که از Web Terminal استفاده می‌کنند.
-تمام دستورها را به ترتیب اجرا کنید.
+> این روش برای Web Terminal و سرورهایی است که دسترسی root دارند. در این پروژه نیازی به `sudo su` نیست.
 
-## 1) آماده‌سازی سرور
+## 1) دریافت پروژه
+
+اگر پروژه از قبل روی سرور است:
 
 ```bash
-apt update && apt upgrade -y
-apt install git python3 python3-pip python3-venv curl nano -y
+cd /opt/reporter
+git pull
 ```
 
-بررسی نصب:
+اگر هنوز روی سرور نیست و ریپو Private است، ابتدا دسترسی GitHub را روی سرور تنظیم کنید و سپس پروژه را دریافت کنید. برای مثال با SSH:
 
 ```bash
-python3 --version
-git --version
+cd /opt
+git clone git@github.com:kiarash707/reporter.git
+cd reporter
+```
+
+## 2) نصب مستقیم
+
+داخل پوشه پروژه فقط این را اجرا کنید:
+
+```bash
+bash scripts/install.sh
+```
+
+اسکریپت به‌صورت خودکار:
+- Python و `venv` و وابستگی‌ها را نصب می‌کند.
+- محیط مجازی `venv` را می‌سازد.
+- `requirements.txt` را نصب می‌کند.
+- سرویس Systemd را در مسیر درست قرار می‌دهد.
+- سرویس را برای اجرای خودکار بعد از reboot فعال می‌کند.
+
+## 3) اجرای ربات
+
+برای شروع:
+
+```bash
+systemctl start reporter
+```
+
+بررسی:
+
+```bash
+systemctl status reporter --no-pager
+```
+
+لاگ:
+
+```bash
+journalctl -u reporter -n 100 --no-pager
+```
+
+اگر ربات خطا داشت، اجرای مستقیم برای دیدن خطای واقعی:
+
+```bash
+cd /opt/reporter
+./venv/bin/python3 main.py
 ```
 
 ---
