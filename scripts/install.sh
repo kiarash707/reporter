@@ -1,17 +1,39 @@
 #!/bin/bash
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
-echo 'Installing Reporter Bot...'
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: run this installer as root (without sudo)."
+  exit 1
+fi
+
+echo "==> Installing Reporter Bot in $ROOT_DIR"
 
 apt update
-apt install -y python3 python3-pip python3-venv git
+DEBIAN_FRONTEND=noninteractive apt install -y python3 python3-pip python3-venv git
 
-python3 -m venv venv
-source venv/bin/activate
+if [ ! -d "venv" ]; then
+  python3 -m venv venv
+fi
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+./venv/bin/python -m pip install --upgrade pip setuptools wheel
+./venv/bin/python -m pip install -r requirements.txt
 
-echo 'Installation completed.'
-echo 'Run: ./scripts/start.sh'
+if [ -f "systemd/reporter.service" ]; then
+  install -m 644 systemd/reporter.service /etc/systemd/system/reporter.service
+  systemctl daemon-reload
+  systemctl enable reporter
+fi
+
+echo
+echo "==> Installation completed."
+echo "==> Test manually:"
+echo "    $ROOT_DIR/venv/bin/python3 $ROOT_DIR/main.py"
+echo
+echo "==> Start 24/7 service:"
+echo "    systemctl start reporter"
+echo
+echo "==> Check status:"
+echo "    systemctl status reporter --no-pager"
