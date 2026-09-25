@@ -115,8 +115,12 @@ bot/            application package (handlers, services, storage, i18n, utils)
 deploy/         systemd unit template + Docker/Compose deployment
 docs/           quickstart, installation, configuration, commands, security, …
 scripts/        install.sh · update.sh · uninstall.sh · backup.sh · doctor.sh · service.sh
-tests/          150+ unit tests running without network or credentials
+tests/          160 unit tests running without network or credentials
 ```
+
+> `srckde_6aaa664e8d9ed.py` is the previous single-file version, kept untouched
+> for reference and excluded from the package, the toolchain and the image — see
+> [LEGACY.md](LEGACY.md) before running it.
 
 Architecture details and extension points: **[docs/architecture.md](docs/architecture.md)**.
 

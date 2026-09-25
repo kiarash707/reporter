@@ -20,6 +20,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 * `bot.app.install_event_loop_policy()` — automatically uses `uvloop` when the
   optional extra is installed, and reports which loop backend is in use.
 
+### Notes
+
+* The previous single-file implementation (`srckde_6aaa664e8d9ed.py`) is kept
+  untouched at its original path, at the owner's request, and is excluded from
+  linting, typing, tests and the container image — see `LEGACY.md` for the
+  credential and terms-of-service warnings.
+
 ### Fixed
 
 * `tests/test_config.py::test_is_cached_and_reloadable` no longer depends on the
