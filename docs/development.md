@@ -40,6 +40,7 @@ bash scripts/ci.sh --fix        # let ruff rewrite files instead of failing
 bash scripts/ci.sh --docker     # additionally build the container image
 bash scripts/ci.sh --install-dev  # install the dev tools first if they are missing
 bash scripts/smoke.sh           # end-to-end: install → check → migrate → import → backup
+                              # (run scripts/install.sh first if there is no .venv)
 bash scripts/ci.sh --smoke      # include the smoke test in the pipeline run
 ```
 

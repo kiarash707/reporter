@@ -17,6 +17,15 @@ cd "$ROOT_DIR"
 PY="python3"
 [[ -x .venv/bin/python ]] && PY="$ROOT_DIR/.venv/bin/python"
 
+# The smoke test needs the runtime dependencies (telethon, pydantic-settings).
+if ! "$PY" -c "import telethon, pydantic_settings" 2>/dev/null; then
+  printf '\033[31m✗ %s cannot import the bot dependencies.\033[0m\n' "$PY" >&2
+  echo "  Prepare the environment first:" >&2
+  echo "      bash scripts/install.sh --skip-system-deps --no-service   # creates .venv" >&2
+  echo "  or: pip install -r requirements.txt" >&2
+  exit 2
+fi
+
 pass() { printf '\033[32m  ✓\033[0m %s\n' "$*"; }
 fail() { printf '\033[31m  ✗\033[0m %s\n' "$*" >&2; exit 1; }
 step() { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }

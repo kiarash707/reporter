@@ -29,6 +29,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+* `scripts/smoke.sh` now explains how to prepare the environment (and exits 2)
+  when it is started on a checkout that has no virtual environment, instead of
+  failing later inside a step.
 * `tests/test_config.py::test_is_cached_and_reloadable` no longer depends on the
   developer's local `.env`, so the suite is hermetic on a fresh clone and in CI.
 * Telethon 1.45 compatibility in `classify_error` (the removed
