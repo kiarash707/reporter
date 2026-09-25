@@ -29,6 +29,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+* `scripts/ci.sh` guides you to `scripts/install.sh --dev` when it is started
+  without a virtual environment, and no longer dumps a raw pip failure when the
+  interpreter is not writable; checks that can run are still executed.
 * `scripts/smoke.sh` now explains how to prepare the environment (and exits 2)
   when it is started on a checkout that has no virtual environment, instead of
   failing later inside a step.
