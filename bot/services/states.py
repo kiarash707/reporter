@@ -74,6 +74,6 @@ class StateStore:
 
     def __contains__(self, user_id: object) -> bool:
         try:
-            return self.get(int(user_id)) is not None  # type: ignore[arg-type]
+            return self.get(int(user_id)) is not None  # type: ignore[call-overload]
         except (TypeError, ValueError):
             return False

@@ -152,7 +152,7 @@ def register(client: TelegramClient, ctx: AppContext) -> None:
             await reply(event, ctx.tr("mod.need_reply", language))
             return
         try:
-            await ctx.client.pin_message(event.chat_id, event.reply_to_msg_id, notify=False)
+            await ctx.require_client().pin_message(event.chat_id, event.reply_to_msg_id, notify=False)
             ctx.repo.audit(
                 int(event.sender_id), "pin", target=str(event.reply_to_msg_id), details={"chat_id": event.chat_id}
             )
@@ -300,13 +300,13 @@ async def _require_chat_admin(ctx: AppContext, event: Any, *, need_delete: bool 
     from bot.errors import AccessDenied
 
     user_id = int(event.sender_id)
-    if not await ctx.roles.is_chat_admin(ctx.client, int(event.chat_id), user_id):
+    if not await ctx.roles.is_chat_admin(ctx.require_client(), int(event.chat_id), user_id):
         raise AccessDenied("Group administrator rights required", required_role="chat_admin")
 
     if not need_delete or ctx.is_owner(user_id):
         return
     try:
-        me = await ctx.client.get_permissions(int(event.chat_id), "me")
+        me = await ctx.require_client().get_permissions(int(event.chat_id), "me")
         if not getattr(me, "delete_messages", False):
             language = ctx.language_of(user_id)
             await reply(event, ctx.tr("mod.bot_no_rights", language))
@@ -325,7 +325,7 @@ async def _is_chat_admin_cached(ctx: AppContext, event: Any, chat_id: int, user_
     if cached is not None and abs(moment - cached) < ttl:
         return cached > 0
     try:
-        permissions = await ctx.client.get_permissions(int(chat_id), int(user_id))
+        permissions = await ctx.require_client().get_permissions(int(chat_id), int(user_id))
         is_admin = bool(getattr(permissions, "is_admin", False) or getattr(permissions, "is_creator", False))
     except Exception:
         is_admin = False
@@ -346,7 +346,7 @@ async def _resolve_target(ctx: AppContext, event: Any, raw: str | None) -> int |
         if candidate.lstrip("-").isdigit():
             return int(candidate)
         if candidate.startswith("@"):
-            entity = await ctx.client.get_entity(candidate)
+            entity = await ctx.require_client().get_entity(candidate)
             return int(entity.id)
     except Exception as exc:
         logger.debug("Target resolution failed for %r: %s", raw, exc)
@@ -365,7 +365,7 @@ def _reason_of(raw: str | None, target: int | None) -> str:
 
 async def _name(ctx: AppContext, user_id: int) -> str:
     try:
-        entity = await ctx.client.get_entity(user_id)
+        entity = await ctx.require_client().get_entity(user_id)
         return display_name(entity)
     except Exception:
         return str(user_id)
@@ -507,13 +507,13 @@ async def _purge(ctx: AppContext, event: Any) -> None:
         message_ids = list(range(first, int(event.id) + 1))
     else:
         limit = min(int(raw_count or 10), 100)
-        history = await ctx.client.get_messages(chat_id, limit=limit + 1)
+        history = await ctx.require_client().get_messages(chat_id, limit=limit + 1)
         message_ids = [message.id for message in history if message.id != event.id]
 
     deleted = 0
     for chunk_start in range(0, len(message_ids), 100):
         chunk = message_ids[chunk_start : chunk_start + 100]
-        result = await ModerationService(ctx.repo).delete_messages(ctx.client, chat_id, chunk)
+        result = await ModerationService(ctx.repo).delete_messages(ctx.require_client(), chat_id, chunk)
         if result.ok:
             deleted += len(chunk)
         else:

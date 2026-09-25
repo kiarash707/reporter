@@ -42,8 +42,8 @@ jobs:
       - name: Ruff (format)
         run: ruff format --check .
 
-      - name: Mypy (non-blocking information)
-        run: mypy bot || true
+      - name: Mypy
+        run: mypy bot
 
       - name: Tests with coverage
         run: pytest --cov --cov-report=term-missing --cov-report=xml

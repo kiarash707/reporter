@@ -40,7 +40,7 @@ one bot token, which is what Telegram's terms expect.
 | 🌍 **Bilingual** | Persian and English UI, per-user language, hot-reloadable JSON locale files |
 | 💾 **Storage** | SQLite (WAL) with versioned migrations, automatic backups with retention, atomic snapshots |
 | 🧰 **Operations** | `python -m bot run\|check\|backup\|migrate\|import-legacy`, one-shot installer, systemd unit, Dockerfile, Compose, `scripts/doctor.sh`, `scripts/update.sh` |
-| ✅ **Quality** | 150+ unit tests, ruff lint/format, mypy config, GitHub Actions CI on Python 3.10–3.12, Docker build check |
+| ✅ **Quality** | 160 unit tests, clean ruff lint/format and mypy, GitHub Actions CI on Python 3.10–3.12, Docker build check, plus `bash scripts/ci.sh` to run the whole pipeline locally |
 
 ## Quick install (60 seconds)
 
@@ -134,9 +134,10 @@ sudo bash scripts/uninstall.sh [--purge]
 
 ```bash
 pip install -r requirements-dev.txt
-pytest --cov            # 150+ tests, no network required
+pytest --cov            # 160 tests, no network required
 ruff check . && ruff format --check .
 mypy bot
+bash scripts/ci.sh      # everything the CI pipeline runs
 ```
 
 Contributions are welcome — read [CONTRIBUTING.md](CONTRIBUTING.md) and

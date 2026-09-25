@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from bot import APP_NAME, __version__
-from bot.app import check_environment, print_report, run
+from bot.app import check_environment, install_event_loop_policy, print_report, run
 from bot.config import load_settings
 from bot.errors import BotError, ConfigError
 
@@ -69,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     if command == "import-legacy":
         return _import_legacy(settings, args.path)
 
+    install_event_loop_policy()
     try:
         return asyncio.run(run(settings))
     except KeyboardInterrupt:  # pragma: no cover - interactive stop

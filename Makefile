@@ -70,6 +70,14 @@ clean: ## Remove caches and build artefacts
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 
+.PHONY: ci
+ci: ## Run every CI check locally (lint, format, tests, mypy, scripts)
+	bash scripts/ci.sh
+
+.PHONY: ci-quick
+ci-quick: ## Fast local check: lint, format, tests
+	bash scripts/ci.sh --quick
+
 .PHONY: update
 update: ## Update an existing installation (backup, pull, deps, migrate, restart)
 	bash scripts/update.sh

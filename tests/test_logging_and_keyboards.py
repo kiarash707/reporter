@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 
+import pytest
+
 from bot.keyboards import (
     CB_ACCEPT_RULES,
     CB_GROUP_ANTISPAM,
@@ -123,3 +125,24 @@ def test_keyboard_labels_follow_the_language(context) -> None:
     english = tickets_menu(context, "en")[0][0].text
     persian = tickets_menu(context, "fa")[0][0].text
     assert english != persian
+
+
+# --------------------------------------------------------------------------- #
+# Context helpers
+# --------------------------------------------------------------------------- #
+def test_require_client_reports_a_missing_client(context) -> None:
+    from bot.errors import NotConfigured
+
+    context.client = None
+    with pytest.raises(NotConfigured):
+        context.require_client()
+
+    sentinel = object()
+    context.client = sentinel
+    assert context.require_client() is sentinel
+
+
+def test_event_loop_policy_reports_the_backend() -> None:
+    from bot.app import install_event_loop_policy
+
+    assert install_event_loop_policy() in {"asyncio", "uvloop"}

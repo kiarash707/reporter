@@ -8,8 +8,22 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-* CI pipeline (lint, format check, tests on Python 3.10–3.12, shell syntax, Docker
-  build) and release pipeline (wheel/sdist + `ghcr.io` container image).
+* CI pipeline (lint, format check, tests on Python 3.10–3.12, mypy, shell syntax,
+  Docker build) and release pipeline (wheel/sdist + `ghcr.io` container image).
+* `scripts/ci.sh` (and `make ci`) — runs the complete pipeline locally, including
+  YAML validation and an optional Docker build.
+* `AppContext.require_client()` — explicit Telegram client accessor that raises a
+  domain error instead of an `AttributeError` when used before startup.
+* `bot.app.install_event_loop_policy()` — automatically uses `uvloop` when the
+  optional extra is installed, and reports which loop backend is in use.
+
+### Fixed
+
+* `tests/test_config.py::test_is_cached_and_reloadable` no longer depends on the
+  developer's local `.env`, so the suite is hermetic on a fresh clone and in CI.
+* Telethon 1.45 compatibility in `classify_error` (the removed
+  `errors.BotBlockedError` is now looked up defensively).
+* Type errors across `bot/` resolved; `mypy bot` is clean and blocking in CI.
 
 ## [2.0.0] — 2026-09-25
 

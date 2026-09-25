@@ -33,13 +33,28 @@ def test_loads_valid_configuration(tmp_path: Path) -> None:
     assert settings.db_file.name == "state.db"
 
 
-def test_is_cached_and_reloadable(tmp_path: Path) -> None:
+def test_is_cached_and_reloadable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The singleton caches, and ``reload_settings`` picks up edited values.
+
+    The test must not depend on the developer's own ``.env``: it points the
+    configuration loader at a temporary directory instead.
+    """
     from bot.config import get_settings, reload_settings
 
-    _write(tmp_path)
+    _write(tmp_path, TIMEZONE="UTC", DEFAULT_LANGUAGE="en")
+    monkeypatch.delenv("BOT_HOME", raising=False)
+    monkeypatch.chdir(tmp_path)
+    get_settings.cache_clear()
+
     first = get_settings()
-    assert reload_settings() is not None
-    assert first is not get_settings() or first.model_dump() == get_settings().model_dump()
+    assert first is get_settings()  # cached while unchanged
+    assert first.timezone == "UTC"
+
+    # editing .env only takes effect after an explicit reload
+    _write(tmp_path, TIMEZONE="Europe/Berlin", DEFAULT_LANGUAGE="en")
+    assert get_settings().timezone == "UTC"
+    assert reload_settings().timezone == "Europe/Berlin"
+    get_settings.cache_clear()
 
 
 def test_placeholder_credentials_are_rejected(tmp_path: Path) -> None:

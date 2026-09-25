@@ -315,7 +315,9 @@ def load_settings(**overrides: Any) -> Settings:
     base_dir = Path(overrides.pop("base_dir", detect_base_dir()))
     env_file = base_dir / ".env"
     try:
-        settings = Settings(_env_file=env_file if env_file.is_file() else None, base_dir=base_dir, **overrides)
+        settings = Settings(  # type: ignore[call-arg]  # _env_file is a pydantic-settings runtime kwarg
+            _env_file=env_file if env_file.is_file() else None, base_dir=base_dir, **overrides
+        )
     except Exception as exc:  # pydantic ValidationError subclasses ValueError
         raise ConfigError(_format_validation_error(exc, env_file)) from exc
     return settings

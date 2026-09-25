@@ -253,7 +253,8 @@ class Repository:
     def list_tickets(
         self, *, status: str | None = None, user_id: int | None = None, limit: int = 20
     ) -> list[dict[str, Any]]:
-        clauses, params = [], []
+        clauses: list[str] = []
+        params: list[Any] = []
         if status:
             clauses.append("status = ?")
             params.append(status)

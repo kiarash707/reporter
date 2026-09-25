@@ -136,6 +136,21 @@ async def shutdown(context: AppContext) -> None:
     logger.info("Shutdown complete")
 
 
+def install_event_loop_policy() -> str:
+    """Use uvloop when it is installed, otherwise keep the standard loop.
+
+    Returns the loop implementation that will be used, so the CLI can report it.
+    """
+    try:  # pragma: no cover - depends on the optional uvloop extra
+        import uvloop
+    except ImportError:  # pragma: no cover - the common case
+        return "asyncio"
+    with contextlib.suppress(Exception):  # pragma: no cover - platform specific
+        uvloop.install()
+        return "uvloop"
+    return "asyncio"  # pragma: no cover - platform specific
+
+
 async def run(settings: Settings) -> int:
     """Run the bot until it is stopped by a signal or KeyboardInterrupt."""
     setup_logging(settings)

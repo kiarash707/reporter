@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -171,10 +172,19 @@ class FakeEvent:
 
 
 class FakeClient:
-    """Collects handler registrations instead of talking to Telegram."""
+    """Collects handler registrations instead of talking to Telegram.
 
-    def __init__(self) -> None:
+    A couple of async helpers are included so tests can exercise code paths that
+    legitimately talk to the client (permission lookups, entity resolution)
+    without a network connection.
+    """
+
+    def __init__(self, *, is_admin: bool = False, can_delete: bool = True) -> None:
         self.handlers: list[tuple[Any, Any]] = []
+        self.is_admin = is_admin
+        self.can_delete = can_delete
+        self.sent: list[tuple[Any, str]] = []
+        self.pinned: list[Any] = []
 
     def on(self, builder: Any) -> Any:
         def decorator(func: Any) -> Any:
@@ -182,6 +192,35 @@ class FakeClient:
             return func
 
         return decorator
+
+    # --- minimal Telegram surface used by the handlers -----------------------
+    async def get_permissions(self, chat_id: Any, user_id: Any) -> SimpleNamespace:
+        return SimpleNamespace(
+            is_admin=self.is_admin,
+            is_creator=False,
+            delete_messages=self.can_delete,
+            ban_users=True,
+            restrict_members=True,
+            pin_messages=True,
+        )
+
+    async def get_entity(self, target: Any) -> SimpleNamespace:
+        if isinstance(target, (int, str)) and str(target).lstrip("-").isdigit():
+            return SimpleNamespace(id=int(target), first_name=f"user{target}", username=None)
+        return SimpleNamespace(id=555, first_name="resolved", username="resolved")
+
+    async def get_messages(self, chat_id: Any, limit: int = 10) -> list[SimpleNamespace]:
+        return [SimpleNamespace(id=index) for index in range(1, max(1, limit) + 1)]
+
+    async def send_message(self, chat_id: Any, text: str, **kwargs: Any) -> SimpleNamespace:
+        self.sent.append((chat_id, text))
+        return SimpleNamespace(id=len(self.sent), text=text)
+
+    async def pin_message(self, chat_id: Any, message: Any, **kwargs: Any) -> None:
+        self.pinned.append(message)
+
+    async def delete_messages(self, chat_id: Any, ids: Any) -> None:
+        return None
 
 
 @pytest.fixture

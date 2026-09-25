@@ -27,12 +27,25 @@ access and no real credentials are required.
 ```bash
 ruff check .              # lint
 ruff format .             # format (CI checks with --check)
-mypy bot                  # types (informational in CI)
+mypy bot                  # types (must stay clean)
 bash -n scripts/*.sh      # shell syntax
 ```
 
-The same commands are available through `make`: `make lint`, `make fmt`,
-`make test`, `make cov`, `make typecheck`, `make doctor`.
+Run **everything CI runs** with one command:
+
+```bash
+bash scripts/ci.sh              # lint, format, tests+coverage, mypy, shell, YAML
+bash scripts/ci.sh --quick      # lint, format, tests only
+bash scripts/ci.sh --fix        # let ruff rewrite files instead of failing
+bash scripts/ci.sh --docker     # additionally build the container image
+```
+
+The same steps are available through `make`: `make ci`, `make ci-quick`,
+`make lint`, `make fmt`, `make test`, `make cov`, `make typecheck`,
+`make doctor`.
+
+> The test suite is hermetic: it never reads your local `.env` and never touches
+> the network, so `bash scripts/ci.sh` passes on a fresh clone.
 
 ## Code style
 

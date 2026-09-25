@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from telethon import TelegramClient
 
 from bot.config import Settings
+from bot.errors import NotConfigured
 from bot.i18n import Translator
 from bot.services.states import StateStore
 from bot.storage.database import Database
@@ -43,6 +44,17 @@ class AppContext:
     admin_cache: dict[tuple[int, int], float] = field(default_factory=dict)
     started_at: datetime = field(default_factory=lambda: now("UTC"))
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger("bot"))
+
+    # --- telegram access -----------------------------------------------------
+    def require_client(self) -> TelegramClient:
+        """Return the connected client.
+
+        Handlers run only after startup, so a missing client is a programming
+        error - it is reported as a domain error instead of an ``AttributeError``.
+        """
+        if self.client is None:
+            raise NotConfigured("The Telegram client is not connected yet")
+        return self.client
 
     # --- translations --------------------------------------------------------
     def tr(self, key: str, language: str | None = None, **params: object) -> str:

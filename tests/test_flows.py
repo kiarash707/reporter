@@ -7,7 +7,7 @@ import pytest
 from bot.handlers import commands as command_utils
 from bot.handlers import moderation, tickets
 from bot.storage.repository import TICKET_ANSWERED, TICKET_CLOSED, TICKET_OPEN
-from tests.conftest import FakeEvent
+from tests.conftest import FakeClient, FakeEvent
 
 
 # --------------------------------------------------------------------------- #
@@ -265,6 +265,7 @@ async def test_require_chat_admin_rejects_non_admin(context) -> None:
     from bot.errors import AccessDenied
 
     event = FakeEvent(sender_id=2002, chat_id=-100, is_group=True)
+    context.client = FakeClient()
     context.roles.is_chat_admin = _always(False)  # type: ignore[assignment]
     with pytest.raises(AccessDenied):
         await moderation._require_chat_admin(context, event)
@@ -273,6 +274,7 @@ async def test_require_chat_admin_rejects_non_admin(context) -> None:
 async def test_warn_flow_applies_mute_at_limit(context) -> None:
     context.settings.antispam_warn_limit = 1
     context.settings.antispam_ban_limit = 3
+    context.client = FakeClient(is_admin=True)
     context.roles.is_chat_admin = _always(True)  # type: ignore[assignment]
 
     muted: list[tuple] = []
