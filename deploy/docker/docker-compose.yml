@@ -1,0 +1,30 @@
+# =============================================================================
+#  Docker Compose deployment.
+#    1. cp .env.example .env  &&  fill in the credentials
+#    2. docker compose -f deploy/docker/docker-compose.yml up -d
+# =============================================================================
+services:
+  bot:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: telegram-community-bot:latest
+    container_name: telegram-community-bot
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      BOT_HOME: /app
+      DATA_DIR: /app/data
+      SESSION_DIR: /app/sessions
+      LOG_DIR: /app/logs
+    volumes:
+      - bot-data:/app/data
+      - bot-sessions:/app/sessions
+      - bot-logs:/app/logs
+    stop_grace_period: 30s
+
+volumes:
+  bot-data:
+  bot-sessions:
+  bot-logs:

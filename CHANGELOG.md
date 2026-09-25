@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to this project are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+
+* CI pipeline (lint, format check, tests on Python 3.10–3.12, shell syntax, Docker
+  build) and release pipeline (wheel/sdist + `ghcr.io` container image).
+
+## [2.0.0] — 2026-09-25
+
+Complete rewrite as a modular, tested community & moderation bot.
+
+### Added
+
+* Package layout `bot/{handlers,services,storage,i18n,keyboards,utils}` with an
+  application context shared by every handler.
+* CLI: `python -m bot run|check|backup|migrate|import-legacy` and the `bot`
+  console script; exit codes suited to automation.
+* Support ticket flow with statuses, cooldowns, limits, staff queue and inline
+  actions.
+* Moderation suite (`/warn`, `/unwarn`, `/warns`, `/mute`, `/unmute`, `/ban`,
+  `/unban`, `/kick`, `/purge`, `/pin`, `/setrules`, `/rules`, `/admin`) with
+  audit logging and warn→mute→ban escalation.
+* Anti-spam: flood windows, banned words (plain/regex), link filtering with a
+  whitelist, new-member restrictions, configurable actions.
+* Owner panel with runtime toggles, throttled broadcast, backups, stats, legacy
+  import and locale hot-reload.
+* Bilingual UI (Persian/English) with 140+ keys per locale and per-user language.
+* SQLite storage in WAL mode with versioned migrations, atomic backups and
+  retention.
+* Structured logging with rotation, credential masking and optional JSON lines.
+* One-shot installer plus `update`, `uninstall`, `backup`, `doctor` and
+  `service` scripts; systemd unit template; Dockerfile and Compose file.
+* Documentation set: quickstart, installation (seven methods), configuration,
+  commands, architecture, deployment, security, troubleshooting, FAQ,
+  development, and a Persian quick-install guide.
+* 150+ unit tests covering configuration, storage, services, handlers, flows,
+  keyboards and logging.
+
+### Changed
+
+* Configuration moved to a validated `pydantic-settings` model with placeholder
+  detection; invalid values abort startup with the offending field name.
+* Timezone handling centralized; every timestamp is rendered in the configured
+  zone.
+
+### Removed
+
+* The previous single-file implementation, its embedded credentials and its
+  unsolicited mass-messaging behaviour. Configuration now lives exclusively in
+  `.env`, and the bot only replies to users who contact it.
+
+### Security
+
+* No secrets in the repository; `.env` and `sessions/` are git-ignored and logs
+  are sanitised.
+* Handler permissions are default-deny; owner panel and broadcast require a
+  private chat.
