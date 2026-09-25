@@ -44,9 +44,10 @@ bash scripts/smoke.sh           # end-to-end: install → check → migrate → 
 bash scripts/ci.sh --smoke      # include the smoke test in the pipeline run
 ```
 
-On a production-only install (no dev dependencies) the script explains what is
-missing and still runs the checks that work, instead of failing with
-`No module named pytest`.
+On a production-only install (no dev dependencies) or a checkout without a
+virtual environment, the script explains what is missing — with the exact
+`scripts/install.sh --dev …` command — and still runs the checks that work,
+instead of failing with `No module named pytest`.
 
 The same steps are available through `make`: `make ci`, `make ci-quick`,
 `make lint`, `make fmt`, `make test`, `make cov`, `make typecheck`,

@@ -32,9 +32,17 @@ if [[ -x .venv/bin/python ]]; then
   PY=".venv/bin/python"
 elif command -v python3 >/dev/null 2>&1; then
   PY="python3"
-  echo "! .venv not found - falling back to the system python" >&2
+  printf '\033[33m! No virtual environment found (.venv) - using the system python (%s).\033[0m\n' "$(command -v python3)"
+  echo "  For the full pipeline create one with:"
+  echo "      bash scripts/install.sh --dev --skip-system-deps --no-service"
 else
   echo "No python interpreter found." >&2; exit 1
+fi
+
+if ! "$PY" -c "import telethon" 2>/dev/null; then
+  printf '\033[33m! %s cannot import the runtime dependencies (telethon).\033[0m\n' "$PY"
+  echo "  Prepare the environment first:"
+  echo "      bash scripts/install.sh --dev --skip-system-deps --no-service"
 fi
 
 FAILED=0
@@ -53,9 +61,15 @@ for tool in $TOOLS; do have_module "$tool" || MISSING+=("$tool"); done
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   if [[ "$INSTALL_DEV" == "yes" ]]; then
     step "Installing development dependencies"
-    "$PY" -m pip install --quiet -r requirements-dev.txt && pass "requirements-dev.txt installed" \
-      || { fail "pip install -r requirements-dev.txt"; exit 1; }
-    MISSING=()
+    if "$PY" -m pip install --quiet -r requirements-dev.txt; then
+      pass "requirements-dev.txt installed"
+      MISSING=()
+    else
+      fail "pip install -r requirements-dev.txt"
+      echo "  The interpreter is probably not writable. Create a virtual environment instead:"
+      echo "      bash scripts/install.sh --dev --skip-system-deps --no-service"
+      echo "  Continuing with the checks that do not need the dev tools."
+    fi
   else
     printf '\n\033[33m! Missing development tools: %s\033[0m\n' "${MISSING[*]}"
     echo "  The lint/test/type checks need them. Install once with:"
