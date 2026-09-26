@@ -22,10 +22,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Notes
 
-* The previous single-file implementation (`srckde_6aaa664e8d9ed.py`) is kept
-  untouched at its original path, at the owner's request, and is excluded from
-  linting, typing, tests and the container image — see `LEGACY.md` for the
-  credential and terms-of-service warnings.
+* The previous single-file implementation was removed because it was obsolete and contained credentials. The maintained migration command imports legacy JSON data when needed.
 
 ### Fixed
 
