@@ -21,10 +21,10 @@ from telethon.tl.types import (
     InputReportReasonOther
 )
 
-API_ID = ای پی ای ایدی 
-API_HASH = "ای پی ای هش"
-BOT_TOKEN = "توکن ربات اینجا "
-OWNER_IDS = [#ایدی عددی مالک رو اینجا بنویس]
+API_ID = 27786760
+API_HASH = "572e48bb7059438ed4e04c572e251f98"
+BOT_TOKEN = "8648562521:AAEmFbzgBnHrsRt7IfH0c9ofZ6Hn-SwApac"
+OWNER_IDS = [8437686179]
 
 DATA_FILE = "data.json"
 ADMIN_SESSIONS_DIR = "admin_sessions"
