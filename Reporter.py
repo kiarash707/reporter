@@ -43,8 +43,8 @@ os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
 logging.basicConfig(
     filename=os.path.join(DATA_DIR, "bot.log"),
     level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    encoding="utf-8"
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    encoding='utf-8'
 )
 logger = logging.getLogger(__name__)
 
@@ -466,580 +466,757 @@ def telegram_menu_keyboard(user_id):
     is_own = is_owner(user_id)
     kb = []
     kb.append([
-        Button.inline("🚫 ریپورت کانال/گروه" if lang== "fa" else "🚫 REPORT CHANNEL/GROUP", "tg_report", style="danger"),
-        Button.inline("📝 ریپورت پست" if lang== "fa" else "📝 REPORT POST", "tg_report_post", style="danger")
+        Button.inline("🚫 ریپورت کانال/گروه" if lang=="fa" else "🚫 REPORT CHANNEL/GROUP", "tg_report", style="danger"),
+        Button.inline("📝 ریپورت پست" if lang=="fa" else "📝 REPORT POST", "tg_report_post", style="danger")
     ])
     kb.append([
-        Button.inline("👤 ریپورت پروفایل" if lang== "fa" else "👤 REPORT PROFILE", "tg_report_profile", style="danger"),
-        Button.inline("🤖 ریپورت ربات" if lang== "fa" else "🤖 REPORT BOT", "tg_report_bot", style="danger")
+        Button.inline("👤 ریپورت پروفایل" if lang=="fa" else "👤 REPORT PROFILE", "tg_report_profile", style="danger"),
+        Button.inline("🤖 ریپورت ربات" if lang=="fa" else "🤖 REPORT BOT", "tg_report_bot", style="danger")
     ])
     kb.append([
-        Button.inline("👤 ریپورت اکانت" if lang== "fa" else "👤 REPORT ACCOUNT", "tg_report_account", style="danger"),
-        Button.inline("📋 ریپورت دستی" if lang== "fa" else "📋 MANUAL REPORT", "tg_manual_report", style="primary")
+        Button.inline("👤 ریپورت اکانت" if lang=="fa" else "👤 REPORT ACCOUNT", "tg_report_account", style="danger"),
+        Button.inline("📋 ریپورت دستی" if lang=="fa" else "📋 MANUAL REPORT", "tg_manual_report", style="primary")
     ])
     if is_own:
         kb.append([
-            Button.inline("⚙️ مدیریت اکانت‌ها" if lang== "fa" else "⚙️ MANAGE ACCOUNTS", "tg_manage_acc", style="primary"),
-            Button.inline("📊 وضعیت سشن‌ها" if lang== "fa" else "📊 SESSION STATUS", "tg_session_status", style="primary")
+            Button.inline("⚙️ مدیریت اکانت‌ها" if lang=="fa" else "⚙️ MANAGE ACCOUNTS", "tg_manage_acc", style="primary"),
+            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")
         ])
-    kb.append([Button.inline("🔙 بازگشت به منوی اصلی" if lang== "fa" else "🔙 BACK TO MAIN", "back_main", style="primary")])
+    else:
+        kb.append([
+            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc", style="success"),
+            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_shared", style="primary")
+        ])
+        kb.append([
+            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc", style="danger"),
+            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")
+        ])
     return kb
 
-def reason_keyboard():
+def manage_accounts_keyboard(user_id):
+    lang = get_user_lang(user_id) or "fa"
     return [
-        [Button.inline("🚫 Spam", "reason_1"), Button.inline("❌ Fake", "reason_2")],
-        [Button.inline("🔪 Violence", "reason_3"), Button.inline("🔞 Porn", "reason_4")],
-        [Button.inline("👶 Child Abuse", "reason_5"), Button.inline("©️ Copyright", "reason_6")],
-        [Button.inline("📋 Personal Details", "reason_7"), Button.inline("📝 Other", "reason_8")],
-        [Button.inline("💸 Scam", "reason_9")]
+        [
+            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc", style="success"),
+            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc", style="danger")
+        ],
+        [
+            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_all", style="primary"),
+            Button.inline("📋 لیست اشتراکی" if lang=="fa" else "📋 LIST SHARED", "tg_list_shared", style="primary")
+        ],
+        [Button.inline("🔙 بازگشت" if lang=="fa" else "🔙 BACK", "tg_back", style="primary")]
     ]
 
-def is_subscribed_to_force_channels(client, user_id, force_channels):
-    return True
+def reason_keyboard():
+    buttons = []
+    row = []
+    for i in range(1, 10):
+        reason_name = REPORT_REASONS[str(i)][0]
+        row.append(Button.inline(reason_name, f"tg_reason_{i}", style="primary"))
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([Button.inline("🔙 Back", "tg_back", style="primary")])
+    return buttons
 
-async def get_all_users():
-    data = load_data()
-    return data.get("users", [])
+def admin_duration_keyboard(lang):
+    return [
+        [
+            Button.inline("1 ساعت" if lang=="fa" else "1 hour", "adm_1h", style="primary"),
+            Button.inline("1 روز" if lang=="fa" else "1 day", "adm_1d", style="primary")
+        ],
+        [
+            Button.inline("1 هفته" if lang=="fa" else "1 week", "adm_1w", style="primary"),
+            Button.inline("1 ماه" if lang=="fa" else "1 month", "adm_1m", style="primary")
+        ],
+        [
+            Button.inline("3 ماه" if lang=="fa" else "3 months", "adm_3m", style="primary"),
+            Button.inline("6 ماه" if lang=="fa" else "6 months", "adm_6m", style="primary")
+        ],
+        [
+            Button.inline("1 سال" if lang=="fa" else "1 year", "adm_1y", style="success"),
+            Button.inline("🔙 برگشت" if lang=="fa" else "🔙 Back", "back_main", style="primary")
+        ]
+    ]
 
-async def is_admin_panel_access(user_id):
-    return is_owner(user_id) or is_admin(user_id)
-
-def add_user(user_id):
-    data = load_data()
-    if user_id not in data["users"]:
-        data["users"].append(user_id)
-        save_data(data)
-
-def add_admin(user_id, days):
-    data = load_data()
-    expires = datetime.now(pytz.timezone('Asia/Tehran')) + timedelta(days=days)
-    activated = datetime.now(pytz.timezone('Asia/Tehran'))
-    data["admins"][str(user_id)] = {
-        "activated": activated,
-        "expires": expires
-    }
-    data.setdefault("admin_data", {}).setdefault(str(user_id), {
-        "smtp": [],
-        "active_senders": [],
-        "recipients": []
-    })
-    save_data(data)
-
-async def remove_admin(user_id):
-    data = load_data()
-    data.get("admins", {}).pop(str(user_id), None)
-    data.get("admin_data", {}).pop(str(user_id), None)
-    save_data(data)
-
-async def broadcast_message(client, message):
-    data = load_data()
-    users = data.get("users", [])
-    total = len(users)
-    sent = 0
-    blocked = 0
-    failed = 0
-    for i, uid in enumerate(users):
-        try:
-            await client.send_message(uid, message)
-            sent += 1
-        except errors.UserIsBlockedError:
-            blocked += 1
-        except:
-            failed += 1
-        await asyncio.sleep(0.2)
-    return total, sent, blocked, failed
-
-async def check_limits():
-    data = load_data()
-    tehran = pytz.timezone('Asia/Tehran')
-    now = datetime.now(tehran)
-    today = now.strftime("%Y-%m-%d")
-    week = now.strftime("%Y-W%W")
-    if data.get("today_date") != today:
-        data["today_date"] = today
-        data["send_today"] = 0
-    if data.get("week_number") != week:
-        data["week_number"] = week
-        data["send_week"] = 0
-    save_data(data)
-
-async def scheduled_backup():
-    while True:
-        try:
-            await asyncio.sleep(29 * 24 * 60 * 60)
-            data = load_data()
-            msg = "💾 Backup Data
-
-" + json.dumps(data, ensure_ascii=False, indent=2)
-            for oid in OWNER_IDS:
-                try:
-                    await bot_instance.send_message(oid, msg[:4096])
-                except:
-                    pass
-        except asyncio.CancelledError:
-            raise
-        except:
-            await asyncio.sleep(60)
-
-async def notify_startup():
-    for oid in OWNER_IDS:
-        try:
-            await bot_instance.send_message(
-                oid,
-                "✅ SHIKH REPORTER online.
-"
-                f"⏱️ Started: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-        except:
-            pass
-
-async def execute_email_send(event, state, user_id, lang):
-    data = load_data()
-    admin_data = data.get("admin_data", {}).get(str(user_id), {})
-    smtp_accounts = admin_data.get("smtp", [])
-    active_senders = admin_data.get("active_senders", [])
-    recipients = admin_data.get("recipients", [])
-    if not smtp_accounts or not active_senders or not recipients:
-        await event.reply("❌ SMTP/فرستنده/گیرنده کافی نیست" if lang == "fa" else "❌ SMTP/sender/recipient data missing")
-        return
-    subject = state.get("email_subject", "Report")
-    body = state.get("email_body", "")
-    successful = 0
-    failed = 0
-    for sender_index in active_senders:
-        try:
-            sender = smtp_accounts[sender_index]
-            for recipient in recipients:
-                ok, err = await asyncio.to_thread(
-                    send_email_sync,
-                    sender["email"],
-                    sender["password"],
-                    recipient,
-                    subject,
-                    body
-                )
-                if ok:
-                    successful += 1
-                else:
-                    failed += 1
-        except Exception:
-            failed += 1
-    data["send_today"] = data.get("send_today", 0) + successful
-    data["send_week"] = data.get("send_week", 0) + successful
-    save_data(data)
-    await event.reply(
-        (f"✅ ارسال تمام شد\n📤 موفق: {successful}\n❌ ناموفق: {failed}")
-        if lang == "fa" else
-        (f"✅ Sending finished\n📤 Success: {successful}\n❌ Failed: {failed}")
-    )
+# =============== HANDLERS ===============
 
 async def start_handler(event):
     user_id = event.sender_id
-    data = load_data()
-    add_user(user_id)
-
     if is_blocked(user_id):
-        await event.reply("🚫 شما مسدود شده‌اید")
+        await event.reply("🚫 شما بلاک هستید" if get_user_lang(user_id) == "fa" else "🚫 You are blocked")
         return
 
+    data = load_data()
+    if str(user_id) not in data["users"]:
+        data["users"].append(user_id)
+        save_data(data)
+
     lang = get_user_lang(user_id)
-    if not lang:
-        lang = "fa"
-        set_user_lang(user_id, lang)
+    if lang is None:
+        buttons = [
+            [Button.inline("فارسی", "lang_fa", style="primary"), Button.inline("English", "lang_en", style="primary")]
+        ]
+        await event.reply("🌍 Please choose your language:\nلطفاً زبان خود را انتخاب کنید:", buttons=buttons)
+        return
 
     if not (is_owner(user_id) or is_admin(user_id)):
         await event.reply(
-            "سلام 👋
-این ربات فقط برای ادمین‌ها فعال است.
-"
-            "از مالک درخواست دسترسی کنید."
+            "⛔ شما مجاز به استفاده از این ربات نیستید. لطفاً با پشتیبانی تماس بگیرید." if lang == "fa" else "⛔ You are not authorized to use this bot. Please contact support."
         )
         return
 
-    await event.reply("🏠 منوی اصلی", buttons=main_menu_keyboard(user_id))
+    await event.reply(
+        "✅ به ربات ریپورتر شیخ خوش آمدید" if lang == "fa" else "✅ Welcome to SHIKH REPORTER Bot",
+        buttons=main_menu_keyboard(user_id)
+    )
 
 async def callback_handler(event):
+    data_str = event.data.decode('utf-8')
     user_id = event.sender_id
-    if is_blocked(user_id):
-        return
-
-    data = load_data()
     lang = get_user_lang(user_id) or "fa"
-    payload = event.data.decode("utf-8")
 
-    try:
+    # ignore dummy callbacks
+    if data_str in ["noop", "none"]:
         await event.answer()
-    except:
-        pass
-
-    if payload == "back_main":
-        await event.edit("🏠 منوی اصلی", buttons=main_menu_keyboard(user_id))
         return
 
-    if payload == "change_lang":
-        await event.edit("🌐 انتخاب زبان / Choose language", buttons=[
-            [Button.inline("🇮🇷 فارسی", "lang_fa"), Button.inline("🇬🇧 English", "lang_en")]
-        ])
-        return
-
-    if payload in ("lang_fa", "lang_en"):
-        set_user_lang(user_id, "fa" if payload == "lang_fa" else "en")
-        await event.edit("✅ زبان تغییر کرد", buttons=main_menu_keyboard(user_id))
-        return
-
-    if payload == "menu_email":
-        if not can_telegram_reporter(user_id):
+    if data_str in ["lang_fa", "lang_en"]:
+        lang_code = "fa" if data_str == "lang_fa" else "en"
+        set_user_lang(user_id, lang_code)
+        lang = lang_code
+        if not (is_owner(user_id) or is_admin(user_id)):
+            await event.edit(
+                "⛔ شما مجاز به استفاده از این ربات نیستید. لطفاً با پشتیبانی تماس بگیرید." if lang == "fa" else "⛔ You are not authorized to use this bot. Please contact support."
+            )
             return
-        await event.edit("📧 منوی ایمیل", buttons=email_menu_keyboard(user_id))
-        return
-
-    if payload == "menu_telegram":
-        if not can_telegram_reporter(user_id):
-            return
-        await event.edit("🚫 منوی تلگرام ریپورتر", buttons=telegram_menu_keyboard(user_id))
-        return
-
-    if payload == "owner_panel":
-        if not is_owner(user_id):
-            return
-        await event.edit("👑 پنل مالک", buttons=owner_panel_keyboard(user_id))
-        return
-
-    if payload == "add_admin":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "add_admin"}
-        await event.edit("🆔 آیدی عددی ادمین را بفرستید")
-        return
-
-    if payload == "em_broadcast":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_broadcast"}
-        await event.edit("📢 متن پیام همگانی را ارسال کنید")
-        return
-
-    if payload == "em_msg_user":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_msg_user_id"}
-        await event.edit("🆔 آیدی کاربر را بفرستید")
-        return
-
-    if payload == "em_block":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_block_id"}
-        await event.edit("🆔 آیدی کاربر برای بلاک")
-        return
-
-    if payload == "em_unblock":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_unblock_id"}
-        await event.edit("🆔 آیدی کاربر برای آنبلاک")
-        return
-
-    if payload == "em_force_channel":
-        if not is_owner(user_id):
-            return
-        await event.edit("📢 مدیریت کانال اجباری", buttons=force_channel_keyboard(user_id))
-        return
-
-    if payload == "em_back":
-        await event.edit("👑 پنل مالک", buttons=owner_panel_keyboard(user_id))
-        return
-
-    if payload == "em_fc_add":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_fc_add"}
-        await event.edit("📢 یوزرنیم کانال را بفرستید")
-        return
-
-    if payload == "em_fc_remove":
-        if not is_owner(user_id):
-            return
-        USER_STATE[user_id] = {"step": "waiting_fc_remove"}
-        await event.edit("📢 یوزرنیم کانال برای حذف")
-        return
-
-    if payload == "em_fc_list":
-        if not is_owner(user_id):
-            return
-        channels = load_data().get("force_channels", [])
         await event.edit(
-            "📋 کانال‌ها:\n" + ("\n".join(channels) if channels else "لیست خالی"),
-            buttons=force_channel_keyboard(user_id)
+            "✅ زبان ذخیره شد" if lang == "fa" else "✅ Language saved",
+            buttons=main_menu_keyboard(user_id)
         )
         return
 
-    if payload == "em_smtp_add":
-        if not can_telegram_reporter(user_id):
-            return
-        USER_STATE[user_id] = {"step": "smtp_email"}
-        await event.edit("📧 ایمیل Gmail را بفرستید")
+    if not (is_owner(user_id) or is_admin(user_id)):
+        await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
         return
 
-    if payload == "em_smtp_list":
-        if not can_telegram_reporter(user_id):
-            return
-        admin_data = get_admin_data(user_id)
-        smtp = admin_data.get("smtp", [])
-        if not smtp:
-            await event.edit("📋 لیست SMTP خالی است", buttons=email_menu_keyboard(user_id))
-            return
-        lines = []
-        for i, s in enumerate(smtp, 1):
-            lines.append(f"{i}. {s.get('email', 'unknown')}")
-        await event.edit("📋 SMTP:\n" + "\n".join(lines), buttons=email_menu_keyboard(user_id))
+    if data_str == "change_lang":
+        buttons = [
+            [Button.inline("فارسی", "lang_fa", style="primary"), Button.inline("English", "lang_en", style="primary")]
+        ]
+        await event.edit("🌍 انتخاب زبان / Choose language:", buttons=buttons)
         return
 
-    if payload == "em_activate":
-        if not can_telegram_reporter(user_id):
-            return
-        USER_STATE[user_id] = {"step": "activate_sender"}
-        await event.edit("🔢 شماره SMTP برای فعال‌سازی را بفرستید")
-        return
-
-    if payload == "em_single_send":
-        if not can_telegram_reporter(user_id):
-            return
-        USER_STATE[user_id] = {"step": "email_subject"}
-        await event.edit("📝 موضوع ایمیل را بفرستید")
-        return
-
-    if payload == "em_bulk_send":
-        if not can_telegram_reporter(user_id):
-            return
-        USER_STATE[user_id] = {"step": "email_subject_bulk"}
-        await event.edit("📝 موضوع ایمیل گروهی را بفرستید")
-        return
-
-    if payload == "em_recips":
-        if not can_telegram_reporter(user_id):
-            return
-        recipients = get_admin_data(user_id).get("recipients", [])
+    if data_str == "menu_email":
         await event.edit(
-            "👥 گیرنده‌ها:\n" + ("\n".join(recipients) if recipients else "لیست خالی"),
+            "📧 **ایمیل ریپورتر**" if lang == "fa" else "📧 **Email Reporter**",
             buttons=email_menu_keyboard(user_id)
         )
         return
 
-    if payload == "em_add_recip":
+    if data_str == "menu_telegram":
         if not can_telegram_reporter(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized access", alert=True)
             return
-        USER_STATE[user_id] = {"step": "add_recipient"}
-        await event.edit("📧 ایمیل گیرنده را بفرستید")
-        return
-
-    if payload == "em_clear_recip":
-        if not can_telegram_reporter(user_id):
-            return
-        data["admin_data"].setdefault(str(user_id), {"smtp": [], "active_senders": [], "recipients": []})
-        data["admin_data"][str(user_id)]["recipients"] = []
-        save_data(data)
-        await event.edit("✅ گیرنده‌ها پاک شدند", buttons=email_menu_keyboard(user_id))
-        return
-
-    if payload == "em_stats":
-        if not can_telegram_reporter(user_id):
-            return
-        await check_limits()
-        stats = load_data()
         await event.edit(
-            f"📊 امروز: {stats.get('send_today', 0)}\n"
-            f"📅 این هفته: {stats.get('send_week', 0)}",
-            buttons=email_menu_keyboard(user_id)
+            "🚫 **تلگرام ریپورتر**" if lang == "fa" else "🚫 **Telegram Reporter**",
+            buttons=telegram_menu_keyboard(user_id)
         )
         return
 
-    if payload == "em_agency":
-        if not can_telegram_reporter(user_id):
-            return
-        await event.edit("ℹ️ بخش نمایندگی در این نسخه نمایشی است.", buttons=email_menu_keyboard(user_id))
+    if data_str == "back_main":
+        await event.edit("✅ منوی اصلی" if lang == "fa" else "✅ Main Menu", buttons=main_menu_keyboard(user_id))
         return
 
-    if payload == "tg_manage_acc":
+    if data_str == "owner_panel":
         if not is_owner(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
             return
-        USER_STATE[user_id] = {"step": "select_admin"}
-        await event.edit("🆔 آیدی ادمین هدف را بفرستید (برای خودتان 0)")
+        await event.edit("👑 پنل مالک" if lang == "fa" else "👑 Owner Panel",
+                        buttons=owner_panel_keyboard(user_id))
         return
 
-    if payload == "tg_session_status":
+    if data_str == "add_admin":
         if not is_owner(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
             return
-        sessions = get_user_sessions(user_id, force_refresh=True)
-        if not sessions:
-            await event.edit("📋 هیچ سشنی ثبت نشده است", buttons=telegram_menu_keyboard(user_id))
-            return
-        lines = []
-        for s in sessions:
-            status = await check_session_status(s)
-            lines.append(f"{s[0]}/{s[1]}: {status}")
-        await event.edit("📊 وضعیت سشن‌ها:\n\n" + "\n".join(lines), buttons=telegram_menu_keyboard(user_id))
+        USER_STATE[user_id] = {"action": "add_admin", "step": "waiting_user_id"}
+        await event.edit("🆔 آیدی عددی کاربر را برای افزودن به ادمین‌ها وارد کنید" if lang == "fa" else "🆔 Enter user ID to add as admin")
         return
 
-    if payload.startswith("tg_report"):
-        if not can_telegram_reporter(user_id):
+    if data_str.startswith("adm_"):
+        state = USER_STATE.get(user_id, {})
+        if state.get("action") != "add_admin" or state.get("step") != "waiting_duration":
+            await event.answer("⏳ لطفاً ابتدا آیدی کاربر را وارد کنید" if lang == "fa" else "⏳ Please enter user ID first", alert=True)
             return
-        op_type = {
-            "tg_report": "report",
-            "tg_report_post": "report_post",
-            "tg_report_profile": "report_profile",
-            "tg_report_bot": "report_bot",
-            "tg_report_account": "report_account",
-            "tg_manual_report": "manual_report"
-        }.get(payload)
-        if not op_type:
+        target_user = state.get("target_user")
+        if not target_user:
+            await event.answer("❌ خطا" if lang == "fa" else "❌ Error")
             return
-        sessions = get_user_sessions(user_id, force_refresh=True)
-        if not sessions:
-            await event.edit("❌ ابتدا حداقل یک اکانت اضافه کنید")
-            return
-        USER_STATE[user_id] = {
-            "step": "count",
-            "type": op_type,
-            "sessions": sessions
+
+        current_time = datetime.now(pytz.timezone('Asia/Tehran'))
+        duration_map = {
+            "adm_1h": timedelta(hours=1),
+            "adm_1d": timedelta(days=1),
+            "adm_1w": timedelta(weeks=1),
+            "adm_1m": timedelta(days=30),
+            "adm_3m": timedelta(days=90),
+            "adm_6m": timedelta(days=180),
+            "adm_1y": timedelta(days=365)
         }
-        await event.edit(f"👥 تعداد اکانت‌ها: {len(sessions)}\nچند اکانت استفاده شود؟")
+        duration = duration_map.get(data_str)
+        if not duration:
+            await event.answer("مدت نامعتبر" if lang == "fa" else "Invalid duration")
+            return
+
+        expires = current_time + duration
+        data_db = load_data()
+        data_db.setdefault("admins", {})[str(target_user)] = {
+            "expires": expires,
+            "activated": current_time
+        }
+        data_db.setdefault("admin_data", {}).setdefault(str(target_user), {
+            "smtp": [],
+            "active_senders": [],
+            "recipients": []
+        })
+        save_data(data_db)
+
+        await event.edit(
+            f"✅ ادمین برای کاربر {target_user} با موفقیت افزوده شد\n"
+            f"تاریخ انقضا: {expires.strftime('%Y-%m-%d %H:%M:%S')}" if lang == "fa" else
+            f"✅ Admin added for user {target_user}\n"
+            f"Expires: {expires.strftime('%Y-%m-%d %H:%M:%S')}",
+            buttons=[[Button.inline("🔙 بازگشت به منوی اصلی" if lang == "fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")]]
+        )
+        USER_STATE.pop(user_id, None)
         return
 
-    if payload.startswith("reason_"):
-        if not can_telegram_reporter(user_id):
+    if data_str.startswith("em_"):
+        await email_callback(event, data_str, user_id, lang)
+        return
+
+    if data_str.startswith("tg_"):
+        await telegram_callback(event, data_str, user_id, lang)
+        return
+
+    await event.answer("Unknown")
+
+# =============== EMAIL CALLBACKS ===============
+
+async def email_callback(event, data, user_id, lang):
+    data_db = load_data()
+    admin_data = get_admin_data(user_id)
+
+    if data == "em_smtp_add":
+        USER_STATE[user_id] = {"section": "email", "flow": "smtp", "step": "waiting_email"}
+        await event.edit("📧 آدرس Gmail را وارد کنید" if lang == "fa" else "📧 Enter Gmail address")
+        return
+
+    if data == "em_smtp_list":
+        smtp_list = admin_data.get("smtp", [])
+        if not smtp_list:
+            await event.edit("❌ SMTP ثبت نشده" if lang == "fa" else "❌ No SMTP found",
+                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
             return
-        state = USER_STATE.get(user_id)
+        kb = []
+        row = []
+        for smtp in smtp_list:
+            email = smtp.get("email", "")
+            if email:
+                row.append(Button.inline(email, f"em_smtp_view_{email}", style="primary"))
+                if len(row) == 2:
+                    kb.append(row)
+                    row = []
+        if row:
+            kb.append(row)
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        await event.edit("📋 لیست SMTP", buttons=kb)
+        return
+
+    if data.startswith("em_smtp_view_"):
+        email = data.replace("em_smtp_view_", "", 1)
+        kb = [
+            [Button.inline("🗑 حذف" if lang == "fa" else "DELETE", f"em_smtp_del_{email}", style="danger")],
+            [Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_smtp_list", style="primary")]
+        ]
+        await event.edit(f"📧 {email}\n\nحذف شود؟" if lang == "fa" else f"📧 {email}\n\nDelete?",
+                        buttons=kb)
+        return
+
+    if data.startswith("em_smtp_del_"):
+        email = data.replace("em_smtp_del_", "", 1)
+        admin_data["smtp"] = [s for s in admin_data.get("smtp", []) if s.get("email") != email]
+        save_data(data_db)
+        smtp_list = admin_data["smtp"]
+        if not smtp_list:
+            await event.edit("✅ حذف شد\n📭 لیست خالی" if lang == "fa" else "✅ Deleted\nEmpty list",
+                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
+            return
+        kb = []
+        row = []
+        for s in smtp_list:
+            em = s.get("email", "")
+            row.append(Button.inline(em, f"em_smtp_view_{em}", style="primary"))
+            if len(row) == 2:
+                kb.append(row)
+                row = []
+        if row:
+            kb.append(row)
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        await event.edit("📋 لیست SMTP", buttons=kb)
+        return
+
+    if data == "em_activate":
+        smtp_list = admin_data.get("smtp", [])
+        active = admin_data.get("active_senders", [])
+        kb = []
+        for s in smtp_list:
+            email = s.get("email", "")
+            status = "🟢" if email in active else "🔴"
+            kb.append([Button.inline(f"{status} {email}", f"em_toggle_{email}", style="success" if email in active else "primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
+        return
+
+    if data.startswith("em_toggle_"):
+        email = data.replace("em_toggle_", "", 1)
+        active = admin_data.get("active_senders", [])
+        if email in active:
+            active.remove(email)
+        else:
+            active.append(email)
+        save_data(data_db)
+        kb = []
+        for s in admin_data.get("smtp", []):
+            em = s.get("email", "")
+            status = "🟢" if em in active else "🔴"
+            kb.append([Button.inline(f"{status} {em}", f"em_toggle_{em}", style="success" if em in active else "primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
+        await event.answer("✅ وضعیت تغییر کرد" if lang == "fa" else "✅ Status changed")
+        return
+
+    if data == "em_single_send":
+        USER_STATE[user_id] = {"section": "email", "flow": "single", "step": "to"}
+        await event.edit("📧 گیرنده را وارد کنید" if lang == "fa" else "📧 Enter recipient")
+        return
+
+    if data == "em_bulk_send":
+        USER_STATE[user_id] = {"section": "email", "flow": "bulk", "step": "subject"}
+        await event.edit("✏️ موضوع را وارد کنید" if lang == "fa" else "✏️ Enter subject")
+        return
+
+    if data == "em_add_recip":
+        USER_STATE[user_id] = {"section": "email", "step": "add_recipient"}
+        await event.edit("📧 ایمیل گیرنده را ارسال کنید" if lang == "fa" else "📧 Send recipient email")
+        return
+
+    if data == "em_clear_recip":
+        admin_data["recipients"] = []
+        save_data(data_db)
+        await event.edit("🗑 پاک شد" if lang == "fa" else "🗑 Cleared")
+        return
+
+    if data == "em_recips":
+        recips = admin_data.get("recipients", [])
+        text = "\n".join(recips) if recips else ("خالی" if lang == "fa" else "Empty")
+        await event.edit(text, buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
+        return
+
+    if data == "em_stats":
+        today = data_db.get("send_today", 0)
+        week = data_db.get("send_week", 0)
+        await event.edit(f"📊 ارسال امروز: {today}\n📊 ارسال این هفته: {week}" if lang == "fa" else
+                        f"📊 Today: {today}\n📊 This Week: {week}")
+        return
+
+    if data == "em_agency":
+        await event.answer("بخش نمایندگی غیرفعال است" if lang == "fa" else "Agency disabled", alert=True)
+        return
+
+    if data in ["em_broadcast", "em_msg_user", "em_block", "em_unblock", "em_force_channel", "em_fc_add", "em_fc_remove", "em_fc_list"]:
+        if not is_owner(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
+            return
+
+    if data == "em_broadcast":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_broadcast"}
+        await event.edit("📨 متن همگانی را ارسال کنید" if lang == "fa" else "📨 Send broadcast message")
+        return
+
+    if data == "em_msg_user":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_msg_user_id"}
+        await event.edit("🆔 آیدی کاربر را ارسال کنید" if lang == "fa" else "🆔 Send user ID")
+        return
+
+    if data == "em_block":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_block_id"}
+        await event.edit("🚫 آیدی برای بلاک" if lang == "fa" else "🚫 Send ID to block")
+        return
+
+    if data == "em_unblock":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_unblock_id"}
+        await event.edit("✅ آیدی برای آنبلاک" if lang == "fa" else "✅ Send ID to unblock")
+        return
+
+    if data == "em_force_channel":
+        await event.edit("📢 مدیریت کانال اجباری" if lang == "fa" else "📢 Manage Force Channel",
+                        buttons=force_channel_keyboard(user_id))
+        return
+
+    if data == "em_fc_add":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_fc_add"}
+        await event.edit("📢 لینک یا یوزرنیم کانال را ارسال کنید" if lang == "fa" else "📢 Send channel username/link")
+        return
+
+    if data == "em_fc_remove":
+        USER_STATE[user_id] = {"section": "email", "step": "waiting_fc_remove"}
+        await event.edit("🗑 یوزرنیم کانال برای حذف" if lang == "fa" else "🗑 Send username to remove")
+        return
+
+    if data == "em_fc_list":
+        channels = data_db.get("force_channels", [])
+        text = "\n".join(channels) if channels else ("خالی" if lang == "fa" else "Empty")
+        await event.edit(text)
+        return
+
+    if data == "em_back":
+        await event.edit("📧 ایمیل ریپورتر" if lang == "fa" else "📧 Email Reporter",
+                        buttons=email_menu_keyboard(user_id))
+        return
+
+    await event.answer("Unknown email callback")
+
+# =============== TELEGRAM CALLBACKS ===============
+
+async def telegram_callback(event, data, user_id, lang):
+    if not can_telegram_reporter(user_id):
+        await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized access", alert=True)
+        return
+
+    if data == "tg_report":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "report", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_report_post":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "report_post", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_report_profile":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "report_profile", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_report_bot":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "report_bot", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_report_account":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "report_account", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_manual_report":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ هیچ اکانتی در دسترس نیست" if lang == "fa" else "❌ No accounts available", alert=True)
+            return
+        USER_STATE[user_id] = {"section": "telegram", "type": "manual_report", "step": "count", "sessions": sessions}
+        await event.edit(f"🔢 تعداد اکانت؟ (1-{len(sessions)})" if lang == "fa" else f"🔢 Number of accounts? (1-{len(sessions)})")
+        return
+
+    if data == "tg_manage_acc":
+        if not is_owner(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
+            return
+        await event.edit("⚙️ مدیریت اکانت‌ها" if lang == "fa" else "⚙️ Manage Accounts",
+                        buttons=manage_accounts_keyboard(user_id))
+        return
+
+    if data == "tg_list_shared":
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ اکانتی وجود ندارد" if lang == "fa" else "❌ No accounts", alert=True)
+            return
+        kb = []
+        for admin_id, filename in sessions[:15]:
+            phone = filename.replace('.session', '')
+            status = await check_session_status((admin_id, filename))
+            btn_text = f"📱 +{phone} - {status}"
+            kb.append([
+                Button.inline(btn_text, "noop"),
+                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}", style="danger")
+            ])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
+        return
+
+    if data == "tg_list_all":
+        if not is_owner(user_id):
+            await event.answer("⛔ دسترسی غیرمجاز" if lang == "fa" else "⛔ Unauthorized", alert=True)
+            return
+        sessions = get_user_sessions(user_id)
+        if not sessions:
+            await event.answer("❌ اکانتی وجود ندارد" if lang == "fa" else "❌ No accounts", alert=True)
+            return
+        kb = []
+        for admin_id, filename in sessions[:15]:
+            phone = filename.replace('.session', '')
+            status = await check_session_status((admin_id, filename))
+            btn_text = f"📱 +{phone} (Admin {admin_id}) - {status}"
+            kb.append([
+                Button.inline(btn_text, "noop"),
+                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}", style="danger")
+            ])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
+        return
+
+    if data == "tg_add_acc":
+        if is_owner(user_id):
+            USER_STATE[user_id] = {"section": "telegram", "step": "select_admin"}
+            await event.edit("🆔 آیدی عددی ادمین مقصد را وارد کنید (یا 0 برای خودتان)" if lang == "fa" else "🆔 Enter target admin ID (or 0 for yourself)")
+        else:
+            USER_STATE[user_id] = {"section": "telegram", "step": "phone", "target_admin": user_id}
+            await event.edit("📱 شماره تلفن با + را وارد کنید" if lang == "fa" else "📱 Enter phone number with +")
+        return
+
+    if data == "tg_del_acc":
+        if is_owner(user_id):
+            USER_STATE[user_id] = {"section": "telegram", "step": "delete_select_admin"}
+            await event.edit("🆔 آیدی عددی ادمین برای حذف اکانت را وارد کنید" if lang == "fa" else "🆔 Enter admin ID to delete account from")
+        else:
+            USER_STATE[user_id] = {"section": "telegram", "step": "delete_phone", "target_admin": user_id}
+            await event.edit("📱 شماره تلفن برای حذف را وارد کنید" if lang == "fa" else "📱 Enter phone number to delete")
+        return
+
+    if data.startswith("tg_delacc_"):
+        parts = data[len("tg_delacc_"):].split("_", 1)
+        if len(parts) != 2:
+            await event.answer("Error")
+            return
+        admin_id_str, phone_clean = parts
+        if not is_owner(user_id) and admin_id_str != str(user_id):
+            await event.answer("⛔ Unauthorized", alert=True)
+            return
+        admin_dir = get_admin_sessions_dir(int(admin_id_str))
+        path = os.path.join(admin_dir, f"{phone_clean}.session")
+        if os.path.exists(path):
+            os.remove(path)
+            clear_user_cache()
+            await event.answer("✅ حذف شد" if lang=="fa" else "✅ Deleted", alert=True)
+        else:
+            await event.answer("❌ یافت نشد" if lang=="fa" else "❌ Not found", alert=True)
+        sessions = get_user_sessions(user_id, force_refresh=True)
+        kb = []
+        for a_id, fn in sessions[:15]:
+            ph = fn.replace('.session', '')
+            st = await check_session_status((a_id, fn))
+            btn_text = f"📱 +{ph} - {st}"
+            kb.append([
+                Button.inline(btn_text, "noop"),
+                Button.inline("🗑", f"tg_delacc_{a_id}_{ph}", style="danger")
+            ])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
+        return
+
+    if data == "tg_back":
+        await event.edit("🚫 تلگرام ریپورتر" if lang == "fa" else "🚫 Telegram Reporter",
+                        buttons=telegram_menu_keyboard(user_id))
+        return
+
+    if data.startswith("tg_reason_"):
+        reason_key = data.replace("tg_reason_", "", 1)
+        state = USER_STATE.get(user_id, {})
         if not state:
+            await event.answer("Session expired")
             return
-        reason_key = payload.split("_", 1)[1]
         state["reason_key"] = reason_key
-        op_type = state.get("type")
-        if op_type == "report_post":
-            state["step"] = "count_per_account"
-            await event.edit("🔢 چند ریپورت به ازای هر اکانت؟ (1-50)")
+        if state.get("type") == "manual_report":
+            state["step"] = "custom_reason"
+            await event.edit("📝 متن گزارش سفارشی (حداقل 4 خط)" if lang == "fa" else "📝 Enter custom report message (min 4 lines)")
         else:
             state["step"] = "count_per_account"
-            await event.edit("🔢 چند ریپورت به ازای هر اکانت؟ (1-50)")
+            await event.edit("🔢 تعداد ریپورت هر اکانت؟ (1-50)" if lang == "fa" else "🔢 Reports per account? (1-50)")
         return
+
+    await event.answer("Unknown telegram callback")
+
+# =============== MESSAGE HANDLERS ===============
 
 async def message_handler(event):
-    user_id = event.sender_id
-    text = event.raw_text.strip()
-    lang = get_user_lang(user_id) or "fa"
-
-    if is_blocked(user_id):
+    if event.text.startswith('/'):
         return
 
-    add_user(user_id)
+    text = event.text.strip()
+    user_id = event.sender_id
+    state = USER_STATE.get(user_id, {})
+    lang = get_user_lang(user_id) or "fa"
 
-    state = USER_STATE.get(user_id)
     if not state:
         return
 
+    if not (is_owner(user_id) or is_admin(user_id)):
+        USER_STATE.pop(user_id, None)
+        return
+
+    if state.get("action") == "add_admin" and state.get("step") == "waiting_user_id":
+        if not text.isdigit():
+            await event.reply("❌ لطفاً یک آیدی عددی وارد کنید" if lang == "fa" else "❌ Please enter a numeric ID")
+            return
+        target_user = int(text)
+        state["target_user"] = target_user
+        state["step"] = "waiting_duration"
+        await event.reply("⏰ مدت ادمین را انتخاب کنید:" if lang == "fa" else "⏰ Select admin duration:",
+                         buttons=admin_duration_keyboard(lang))
+        return
+
+    section = state.get("section")
+    if section == "email":
+        await email_message_handler(event, state, text, user_id, lang)
+    elif section == "telegram":
+        await telegram_message_handler(event, state, text, user_id, lang)
+
+async def email_message_handler(event, state, text, user_id, lang):
+    data_db = load_data()
+    admin_data = get_admin_data(user_id)
+    flow = state.get("flow")
     step = state.get("step")
 
-    if step == "add_admin":
-        if not is_owner(user_id):
-            USER_STATE.pop(user_id, None)
+    if flow == "smtp":
+        if step == "waiting_email":
+            if "@" not in text or "." not in text:
+                await event.reply("❌ ایمیل معتبر نیست" if lang == "fa" else "❌ Invalid email")
+                return
+            state["email"] = text
+            state["step"] = "waiting_password"
+            await event.reply("🔑 App Password را وارد کنید" if lang == "fa" else "🔑 Enter App Password")
             return
-        if not text.isdigit():
-            await event.reply("❌ آیدی نامعتبر")
-            return
-        target = int(text)
-        USER_STATE[user_id] = {"step": "add_admin_days", "target": target}
-        await event.reply("⏳ چند روز دسترسی؟")
-        return
-
-    if step == "add_admin_days":
-        if not is_owner(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        try:
-            days = int(text)
-            if days <= 0 or days > 3650:
-                raise ValueError
-        except ValueError:
-            await event.reply("❌ تعداد روز باید بین 1 تا 3650 باشد")
-            return
-        target = state["target"]
-        add_admin(target, days)
-        await event.reply("✅ ادمین اضافه شد")
-        USER_STATE.pop(user_id, None)
-        return
-
-    if step == "smtp_email":
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        state["email"] = text
-        state["step"] = "smtp_password"
-        await event.reply("🔐 App Password جیمیل را بفرستید")
-        return
-
-    if step == "smtp_password":
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        ok = await test_smtp_connection(state["email"], text)
-        if not ok:
-            await event.reply("❌ اتصال SMTP ناموفق بود")
-            USER_STATE.pop(user_id, None)
-            return
-        data_db = load_data()
-        admin_data = data_db["admin_data"].setdefault(str(user_id), {"smtp": [], "active_senders": [], "recipients": []})
-        admin_data["smtp"].append({"email": state["email"], "password": text})
-        save_data(data_db)
-        await event.reply("✅ SMTP اضافه شد")
-        USER_STATE.pop(user_id, None)
-        return
-
-    if step == "activate_sender":
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        try:
-            index = int(text) - 1
-            admin_data = get_admin_data(user_id)
-            if index < 0 or index >= len(admin_data.get("smtp", [])):
-                raise ValueError
-            data_db = load_data()
-            data_db["admin_data"][str(user_id)]["active_senders"] = [index]
+        if step == "waiting_password":
+            email = state["email"]
+            password = text.replace(" ", "")
+            ok = await test_smtp_connection(email, password)
+            if not ok:
+                USER_STATE.pop(user_id, None)
+                await event.reply("❌ ایمیل یا App Password اشتباه است" if lang == "fa" else "❌ Wrong email or app password")
+                return
+            admin_data.setdefault("smtp", []).append({"email": email, "password": password})
             save_data(data_db)
-            await event.reply("✅ فرستنده فعال شد")
-        except ValueError:
-            await event.reply("❌ شماره SMTP نامعتبر است")
-        USER_STATE.pop(user_id, None)
-        return
+            USER_STATE.pop(user_id, None)
+            await event.reply("✅ SMTP با موفقیت ذخیره شد" if lang == "fa" else "✅ SMTP saved successfully")
+            return
+
+    if flow == "single":
+        if step == "to":
+            if "@" not in text or "." not in text:
+                await event.reply("❌ ایمیل معتبر نیست" if lang == "fa" else "❌ Invalid email")
+                return
+            state["to"] = text
+            state["step"] = "subject"
+            await event.reply("📝 موضوع را وارد کنید" if lang == "fa" else "📝 Enter subject")
+            return
+        if step == "subject":
+            state["subject"] = text
+            state["step"] = "body"
+            await event.reply("📝 متن ایمیل را وارد کنید" if lang == "fa" else "📝 Enter email body")
+            return
+        if step == "body":
+            to = state["to"]
+            subject = state["subject"]
+            body = text
+            smtp_list = admin_data.get("smtp", [])
+            if not smtp_list:
+                USER_STATE.pop(user_id, None)
+                await event.reply("❌ SMTP موجود نیست" if lang == "fa" else "❌ No SMTP available")
+                return
+            active = admin_data.get("active_senders", [])
+            sender = next((s for s in smtp_list if s["email"] in active), smtp_list[0])
+            ok, _ = send_email_sync(sender["email"], sender["password"], to, subject, body)
+            if ok:
+                await event.reply("✅ ارسال شد" if lang == "fa" else "✅ Sent")
+            else:
+                await event.reply("❌ خطا در ارسال" if lang == "fa" else "❌ Send failed")
+            USER_STATE.pop(user_id, None)
+            return
+
+    if flow == "bulk":
+        if step == "subject":
+            state["subject"] = text
+            state["step"] = "body"
+            await event.reply("📝 متن ایمیل را وارد کنید" if lang == "fa" else "📝 Enter email body")
+            return
+        if step == "body":
+            subject = state["subject"]
+            body = text
+            recips = admin_data.get("recipients", [])
+            smtp_list = admin_data.get("smtp", [])
+            if not smtp_list:
+                USER_STATE.pop(user_id, None)
+                await event.reply("❌ SMTP ندارید" if lang == "fa" else "❌ No SMTP")
+                return
+            if not recips:
+                USER_STATE.pop(user_id, None)
+                await event.reply("❌ گیرنده‌ای نیست" if lang == "fa" else "❌ No recipients")
+                return
+            active = admin_data.get("active_senders", [])
+            sender = next((s for s in smtp_list if s["email"] in active), smtp_list[0])
+            success = 0
+            failed = 0
+            for r in recips:
+                ok, _ = send_email_sync(sender["email"], sender["password"], r, subject, body)
+                if ok:
+                    success += 1
+                else:
+                    failed += 1
+                await asyncio.sleep(1)
+            await event.reply(
+                f"✅ تمام شد\n📨 کل: {len(recips)}\n✅ موفق: {success}\n❌ ناموفق: {failed}"
+                if lang == "fa" else
+                f"✅ Done\n📨 Total: {len(recips)}\n✅ Success: {success}\n❌ Failed: {failed}"
+            )
+            USER_STATE.pop(user_id, None)
+            return
 
     if step == "add_recipient":
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        data_db = load_data()
-        admin_data = data_db["admin_data"].setdefault(str(user_id), {"smtp": [], "active_senders": [], "recipients": []})
-        if text not in admin_data["recipients"]:
-            admin_data["recipients"].append(text)
+        emails = [x.strip() for x in text.splitlines() if x.strip()]
+        added = 0
+        dup = 0
+        for email in emails:
+            if email in admin_data["recipients"]:
+                dup += 1
+                continue
+            admin_data["recipients"].append(email)
+            added += 1
         save_data(data_db)
-        await event.reply("✅ گیرنده اضافه شد")
-        USER_STATE.pop(user_id, None)
-        return
-
-    if step in ("email_subject", "email_subject_bulk"):
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        state["email_subject"] = text
-        state["step"] = "email_body"
-        await event.reply("📝 متن ایمیل را بفرستید")
-        return
-
-    if step == "email_body":
-        if not can_telegram_reporter(user_id):
-            USER_STATE.pop(user_id, None)
-            return
-        state["email_body"] = text
-        await execute_email_send(event, state, user_id, lang)
+        await event.reply(f"✅ {added} گیرنده اضافه شد\n⚠️ تکراری: {dup}" if lang == "fa" else
+                         f"✅ {added} added\n⚠️ duplicate: {dup}")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1047,9 +1224,44 @@ async def message_handler(event):
         if not is_owner(user_id):
             USER_STATE.pop(user_id, None)
             return
-        total, sent, blocked, failed = await broadcast_message(event.client, text)
-        await event.reply(
-            f"✅ Broadcast completed\n👥 Total: {total}\n📤 Sent: {sent}\n🚫 Blocked: {blocked}\n❌ Failed: {failed}"
+        if not text.strip():
+            await event.reply("❌ متن خالی است" if lang == "fa" else "❌ Empty text")
+            return
+        data_db = load_data()
+        users = data_db.get("users", [])
+        sent = 0
+        blocked = 0
+        failed = 0
+        total = len(users)
+        if total == 0:
+            await event.reply("❌ کاربری وجود ندارد" if lang == "fa" else "❌ No users")
+            USER_STATE.pop(user_id, None)
+            return
+        msg = await event.reply("🚀 ارسال همگانی آغاز شد..." if lang == "fa" else "🚀 Broadcast started...")
+        for i, uid in enumerate(users, 1):
+            try:
+                await event.client.send_message(int(uid), text)
+                sent += 1
+            except errors.UserIsBlockedError:
+                blocked += 1
+            except:
+                failed += 1
+            if i % 10 == 0 or i == total:
+                percent = int(i * 100 / total)
+                bar = "🟩" * (percent // 10) + "⬜" * (10 - percent // 10)
+                try:
+                    await msg.edit(
+                        f"🚀 ارسال همگانی\n{bar} {percent}%\n👥 کل: {total}\n📤 موفق: {sent}\n🚫 بلاک: {blocked}\n❌ خطا: {failed}"
+                        if lang == "fa" else
+                        f"🚀 Broadcast\n{bar} {percent}%\n👥 Total: {total}\n📤 Sent: {sent}\n🚫 Blocked: {blocked}\n❌ Failed: {failed}"
+                    )
+                except:
+                    pass
+            await asyncio.sleep(0.05)
+        await msg.edit(
+            f"✅ ارسال همگانی پایان یافت\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%\n👥 کل: {total}\n📤 موفق: {sent}\n🚫 بلاک: {blocked}\n❌ خطا: {failed}"
+            if lang == "fa" else
+            f"✅ Broadcast completed\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%\n👥 Total: {total}\n📤 Sent: {sent}\n🚫 Blocked: {blocked}\n❌ Failed: {failed}"
         )
         USER_STATE.pop(user_id, None)
         return
@@ -1059,11 +1271,11 @@ async def message_handler(event):
             USER_STATE.pop(user_id, None)
             return
         if not text.isdigit():
-            await event.reply("❌ فقط آیدی عددی")
+            await event.reply("❌ فقط آیدی عددی" if lang == "fa" else "❌ Numeric ID only")
             return
         state["target_user"] = int(text)
         state["step"] = "waiting_msg_user_text"
-        await event.reply("✉️ متن پیام را ارسال کنید")
+        await event.reply("✉️ متن پیام را ارسال کنید" if lang == "fa" else "✉️ Send message text")
         return
 
     if step == "waiting_msg_user_text":
@@ -1076,9 +1288,9 @@ async def message_handler(event):
             return
         try:
             await event.client.send_message(target, text)
-            await event.reply("✅ پیام ارسال شد")
+            await event.reply("✅ پیام ارسال شد" if lang == "fa" else "✅ Message sent")
         except:
-            await event.reply("❌ ارسال ناموفق")
+            await event.reply("❌ ارسال ناموفق" if lang == "fa" else "❌ Failed")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1087,7 +1299,7 @@ async def message_handler(event):
             USER_STATE.pop(user_id, None)
             return
         if not text.isdigit():
-            await event.reply("❌ فقط آیدی عددی")
+            await event.reply("❌ فقط آیدی عددی" if lang == "fa" else "❌ Numeric ID only")
             return
         data_db = load_data()
         data_db.setdefault("blocked", [])
@@ -1095,7 +1307,7 @@ async def message_handler(event):
         if target not in data_db["blocked"]:
             data_db["blocked"].append(target)
             save_data(data_db)
-        await event.reply("🚫 کاربر بلاک شد")
+        await event.reply("🚫 کاربر بلاک شد" if lang == "fa" else "🚫 User blocked")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1104,7 +1316,7 @@ async def message_handler(event):
             USER_STATE.pop(user_id, None)
             return
         if not text.isdigit():
-            await event.reply("❌ فقط آیدی عددی")
+            await event.reply("❌ فقط آیدی عددی" if lang == "fa" else "❌ Numeric ID only")
             return
         data_db = load_data()
         data_db.setdefault("blocked", [])
@@ -1112,7 +1324,7 @@ async def message_handler(event):
         if target in data_db["blocked"]:
             data_db["blocked"].remove(target)
             save_data(data_db)
-        await event.reply("✅ کاربر آنبلاک شد")
+        await event.reply("✅ کاربر آنبلاک شد" if lang == "fa" else "✅ User unblocked")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1121,7 +1333,7 @@ async def message_handler(event):
             USER_STATE.pop(user_id, None)
             return
         if not text.strip():
-            await event.reply("❌ ورودی نامعتبر")
+            await event.reply("❌ ورودی نامعتبر" if lang == "fa" else "❌ Invalid input")
             return
         channel = text.strip()
         if not channel.startswith("@"):
@@ -1131,7 +1343,7 @@ async def message_handler(event):
         if channel not in data_db["force_channels"]:
             data_db["force_channels"].append(channel)
             save_data(data_db)
-        await event.reply("✅ کانال اضافه شد")
+        await event.reply("✅ کانال اضافه شد" if lang == "fa" else "✅ Channel added")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1140,7 +1352,7 @@ async def message_handler(event):
             USER_STATE.pop(user_id, None)
             return
         if not text.strip():
-            await event.reply("❌ ورودی نامعتبر")
+            await event.reply("❌ ورودی نامعتبر" if lang == "fa" else "❌ Invalid input")
             return
         channel = text.strip()
         if not channel.startswith("@"):
@@ -1150,7 +1362,7 @@ async def message_handler(event):
         if channel in data_db["force_channels"]:
             data_db["force_channels"].remove(channel)
             save_data(data_db)
-        await event.reply("✅ کانال حذف شد")
+        await event.reply("✅ کانال حذف شد" if lang == "fa" else "✅ Channel removed")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1160,36 +1372,36 @@ async def telegram_message_handler(event, state, text, user_id, lang):
 
     if step == "select_admin":
         if not text.strip().isdigit() and text != "0":
-            await event.reply("❌ آیدی نامعتبر")
+            await event.reply("❌ آیدی نامعتبر" if lang == "fa" else "❌ Invalid ID")
             return
         if text == "0":
             target_admin = user_id
         else:
             target_admin = int(text)
         if target_admin != user_id and not is_admin(target_admin) and not is_owner(target_admin):
-            await event.reply("❌ ادمین یافت نشد")
+            await event.reply("❌ ادمین یافت نشد" if lang == "fa" else "❌ Admin not found")
             return
         state["target_admin"] = target_admin
         state["step"] = "phone"
-        await event.reply("📱 شماره تلفن با + را وارد کنید")
+        await event.reply("📱 شماره تلفن با + را وارد کنید" if lang == "fa" else "📱 Enter phone number with +")
         return
 
     if step == "delete_select_admin":
         if not text.strip().isdigit():
-            await event.reply("❌ آیدی نامعتبر")
+            await event.reply("❌ آیدی نامعتبر" if lang == "fa" else "❌ Invalid ID")
             return
         target_admin = int(text)
         if target_admin != user_id and not is_admin(target_admin) and not is_owner(target_admin):
-            await event.reply("❌ ادمین یافت نشد")
+            await event.reply("❌ ادمین یافت نشد" if lang == "fa" else "❌ Admin not found")
             return
         state["target_admin"] = target_admin
         state["step"] = "delete_phone"
-        await event.reply("📱 شماره تلفن برای حذف را وارد کنید")
+        await event.reply("📱 شماره تلفن برای حذف را وارد کنید" if lang == "fa" else "📱 Enter phone number to delete")
         return
 
     if step == "phone":
         if not await validate_phone_number(text):
-            await event.reply("❌ شماره نامعتبر است")
+            await event.reply("❌ شماره نامعتبر است" if lang == "fa" else "❌ Invalid phone number")
             return
         state["phone"] = text
         client = TelegramClient(StringSession(), API_ID, API_HASH)
@@ -1198,7 +1410,7 @@ async def telegram_message_handler(event, state, text, user_id, lang):
             await client.send_code_request(text)
             state["client"] = client
             state["step"] = "code"
-            await event.reply("✅ کد ارسال شد. کد را وارد کنید")
+            await event.reply("✅ کد ارسال شد. کد را وارد کنید" if lang == "fa" else "✅ Code sent. Enter code")
         except Exception as e:
             await event.reply(f"❌ خطا: {str(e)[:100]}")
             await client.disconnect()
@@ -1207,7 +1419,7 @@ async def telegram_message_handler(event, state, text, user_id, lang):
 
     if step == "code":
         if len(text) < 4:
-            await event.reply("❌ کد نامعتبر")
+            await event.reply("❌ کد نامعتبر" if lang == "fa" else "❌ Invalid code")
             return
         client = state.get("client")
         phone = state.get("phone")
@@ -1232,11 +1444,11 @@ async def telegram_message_handler(event, state, text, user_id, lang):
             USER_STATE.pop(user_id, None)
         except errors.SessionPasswordNeededError:
             state["step"] = "password"
-            await event.reply("🔐 رمز دو مرحله‌ای را وارد کنید")
+            await event.reply("🔐 رمز دو مرحله‌ای را وارد کنید" if lang == "fa" else "🔐 Enter 2FA password")
         except errors.PhoneCodeInvalidError:
-            await event.reply("❌ کد اشتباه است")
+            await event.reply("❌ کد اشتباه است" if lang == "fa" else "❌ Invalid code")
         except errors.PhoneCodeExpiredError:
-            await event.reply("❌ کد منقضی شده")
+            await event.reply("❌ کد منقضی شده" if lang == "fa" else "❌ Code expired")
             await client.disconnect()
             USER_STATE.pop(user_id, None)
         except Exception as e:
@@ -1247,7 +1459,7 @@ async def telegram_message_handler(event, state, text, user_id, lang):
 
     if step == "password":
         if not text:
-            await event.reply("❌ رمز نامعتبر")
+            await event.reply("❌ رمز نامعتبر" if lang == "fa" else "❌ Invalid password")
             return
         client = state.get("client")
         phone = state.get("phone")
@@ -1271,7 +1483,7 @@ async def telegram_message_handler(event, state, text, user_id, lang):
             await client.disconnect()
             USER_STATE.pop(user_id, None)
         except errors.PasswordHashInvalidError:
-            await event.reply("❌ رمز اشتباه است")
+            await event.reply("❌ رمز اشتباه است" if lang == "fa" else "❌ Invalid password")
         except Exception as e:
             await event.reply(f"❌ خطا: {str(e)[:100]}")
             await client.disconnect()
@@ -1280,7 +1492,7 @@ async def telegram_message_handler(event, state, text, user_id, lang):
 
     if step == "delete_phone":
         if not text.startswith('+'):
-            await event.reply("❌ شماره باید با + شروع شود")
+            await event.reply("❌ شماره باید با + شروع شود" if lang == "fa" else "❌ Number must start with +")
             return
         phone_clean = text.replace('+', '').replace(' ', '')
         target_admin = state.get("target_admin", user_id)
@@ -1292,9 +1504,9 @@ async def telegram_message_handler(event, state, text, user_id, lang):
                 deleted = True
         if deleted:
             clear_user_cache()
-            await event.reply(f"✅ اکانت {text} حذف شد")
+            await event.reply(f"✅ اکانت {text} حذف شد" if lang == "fa" else f"✅ Account {text} deleted")
         else:
-            await event.reply("❌ اکانتی یافت نشد")
+            await event.reply(f"❌ اکانتی یافت نشد" if lang == "fa" else f"❌ No account found")
         USER_STATE.pop(user_id, None)
         return
 
@@ -1303,29 +1515,29 @@ async def telegram_message_handler(event, state, text, user_id, lang):
             count = int(text)
             sessions = state["sessions"]
             if count < 1 or count > len(sessions):
-                await event.reply(f"❌ عدد بین 1 تا {len(sessions)}")
+                await event.reply(f"❌ عدد بین 1 تا {len(sessions)}" if lang == "fa" else f"❌ Between 1 and {len(sessions)}")
                 return
             state["count"] = count
             state["selected_sessions"] = sessions[:count]
             op_type = state.get("type")
             if op_type in ["report_post"]:
                 state["step"] = "post_links"
-                await event.reply("🔗 لینک پست‌ها را ارسال کنید (1 تا 6 لینک)")
+                await event.reply("🔗 لینک پست‌ها را ارسال کنید (1 تا 6 لینک)" if lang == "fa" else "🔗 Enter post links (1-6)")
             else:
                 state["step"] = "target"
-                await event.reply("🔗 لینک/یوزرنیم هدف را وارد کنید")
+                await event.reply("🔗 لینک/یوزرنیم هدف را وارد کنید" if lang == "fa" else "🔗 Enter target link/username")
         except ValueError:
-            await event.reply("❌ عدد وارد کنید")
+            await event.reply("❌ عدد وارد کنید" if lang == "fa" else "❌ Enter a number")
         return
 
     if step == "post_links":
         post_links = [link.strip() for link in text.split('\n') if link.strip()]
         if not post_links or len(post_links) > 6:
-            await event.reply("❌ بین 1 تا 6 لینک")
+            await event.reply("❌ بین 1 تا 6 لینک" if lang == "fa" else "❌ 1 to 6 links")
             return
         for link in post_links:
             if not await validate_post_link(link):
-                await event.reply(f"❌ لینک نامعتبر: {link}")
+                await event.reply(f"❌ لینک نامعتبر: {link}" if lang == "fa" else f"❌ Invalid link: {link}")
                 return
         state["post_links"] = post_links
         state["step"] = "select_reason"
@@ -1335,12 +1547,12 @@ async def telegram_message_handler(event, state, text, user_id, lang):
     if step == "target":
         target = text.strip()
         if not target:
-            await event.reply("❌ خالی نباشد")
+            await event.reply("❌ خالی نباشد" if lang == "fa" else "❌ Not empty")
             return
         state["target"] = target
         if state.get("type") == "manual_report":
             state["step"] = "custom_reason"
-            await event.reply("📝 متن گزارش سفارشی (حداقل 4 خط)")
+            await event.reply("📝 متن گزارش سفارشی (حداقل 4 خط)" if lang == "fa" else "📝 Custom report message (min 4 lines)")
         else:
             state["step"] = "select_reason"
             await event.reply("📝 دلیل ریپورت را انتخاب کنید:", buttons=reason_keyboard())
@@ -1350,13 +1562,13 @@ async def telegram_message_handler(event, state, text, user_id, lang):
         try:
             cnt = int(text)
             if cnt < 1 or cnt > 50:
-                await event.reply("❌ عدد بین 1 تا 50")
+                await event.reply("❌ عدد بین 1 تا 50" if lang == "fa" else "❌ Between 1 and 50")
                 return
             state["count_per_account"] = cnt
             state["step"] = "custom_reason"
-            await event.reply("📝 متن دلخواه (یا /skip)")
+            await event.reply("📝 متن دلخواه (یا /skip)" if lang == "fa" else "📝 Custom message (or /skip)")
         except ValueError:
-            await event.reply("❌ عدد وارد کنید")
+            await event.reply("❌ عدد وارد کنید" if lang == "fa" else "❌ Enter a number")
         return
 
     if step == "custom_reason":
@@ -1464,19 +1676,16 @@ async def execute_report_operation(event, state, user_id, lang):
     await event.reply(result)
 
 async def main():
-    global bot_instance
-    bot_instance = TelegramClient(BOT_SESSION_PATH, API_ID, API_HASH)
-    await bot_instance.start(bot_token=BOT_TOKEN)
+    bot = TelegramClient(BOT_SESSION_PATH, API_ID, API_HASH)
+    await bot.start(bot_token=BOT_TOKEN)
     logger.info("Bot started")
 
-    bot_instance.add_event_handler(start_handler, events.NewMessage(pattern=r'/start(?: (.+))?'))
-    bot_instance.add_event_handler(callback_handler, events.CallbackQuery())
-    bot_instance.add_event_handler(message_handler, events.NewMessage(func=lambda e: e.is_private and not e.text.startswith('/')))
+    bot.add_event_handler(start_handler, events.NewMessage(pattern=r'/start(?: (.+))?'))
+    bot.add_event_handler(callback_handler, events.CallbackQuery())
+    bot.add_event_handler(message_handler, events.NewMessage(func=lambda e: e.is_private and not e.text.startswith('/')))
 
     logger.info("SHIKH REPORTER is running...")
-    asyncio.create_task(scheduled_backup())
-    await notify_startup()
-    await bot_instance.run_until_disconnected()
+    await bot.run_until_disconnected()
 
 if __name__ == "__main__":
     asyncio.run(main())
