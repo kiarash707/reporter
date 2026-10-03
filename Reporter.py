@@ -2169,7 +2169,36 @@ async def main():
     bot_instance = bot
     bot.add_event_handler(
         start_handler,
-        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?
+        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?$')
+    )
+    bot.add_event_handler(callback_handler, events.CallbackQuery())
+    bot.add_event_handler(
+        message_handler,
+        events.NewMessage(
+            incoming=True,
+            func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
+        )
+    )
+    logger.info("Telegram event handlers registered")
+
+    await bot.start(bot_token=BOT_TOKEN)
+    me = await bot.get_me()
+    if not getattr(me, "bot", False):
+        raise RuntimeError("BOT_TOKEN authenticated as a non-bot Telegram account")
+    logger.info("Telegram bot identity verified: @%s (id=%s)", me.username or "unknown", me.id)
+
+    BOT_STARTED_AT = datetime.now(pytz.UTC)
+    MONITOR_SERVER = start_monitor_server()
+    logger.info("Bot started; processing_enabled=%s", BOT_PROCESSING_ENABLED)
+
+    # Process any updates that arrived before the event loop became fully ready.
+    try:
+        await bot.catch_up()
+        logger.info("Telegram update catch-up completed")
+    except Exception:
+        logger.exception("Telegram update catch-up failed; continuing with live updates")
+
+    logger.info("SHIKH REPORTER is running...")
     try:
         await bot.run_until_disconnected()
     finally:
