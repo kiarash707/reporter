@@ -100,16 +100,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.send_html(INDEX_HTML)
                 return
 
-            if parsed.path in ["/api/control", "/api/users", "/api/admins", "/api/channels"] and self.command == "POST":
-                try:
-                    raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
-                    payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
-                    data = bot_request(parsed.path, timeout=30, method="POST", payload=payload)
-                    self.send_json(200, data)
-                except Exception as exc:
-                    self.send_json(502, {"ok": False, "error": str(exc)[:180]})
-                return
-
             if parsed.path == "/api/users":
                 params = parse_qs(parsed.query)
                 data = bot_request("/api/users?" + "&".join(
@@ -164,6 +154,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "not_found"})
         except Exception as exc:
             self.send_json(500, {"error": str(exc)[:180]})
+
+    def do_POST(self):
+        try:
+            parsed = urlparse(self.path)
+            if not authorized(self):
+                return
+            if parsed.path not in ["/api/control", "/api/users", "/api/admins", "/api/channels"]:
+                self.send_json(404, {"error": "not_found"})
+                return
+            raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
+            payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
+            data = bot_request(parsed.path, timeout=30, method="POST", payload=payload)
+            self.send_json(200, data)
+        except (HTTPError, URLError, TimeoutError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+            self.send_json(502, {"ok": False, "error": str(exc)[:180]})
+        except Exception as exc:
+            self.send_json(500, {"ok": False, "error": str(exc)[:180]})
 
     def log_message(self, format, *args):
         return
