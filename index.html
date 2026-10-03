@@ -414,7 +414,13 @@ button,input{touch-action:manipulation}
 .perf-lite .warning-ticker b{animation:none}
 .perf-ultra .scene3d{display:none}
 .perf-ultra .visual-grid{opacity:.35}
-.perf-ultra .card,.perf-ultra .nav-shell,.perf-ultra .toast{backdrop-filter:none}</style>
+.perf-ultra .card,.perf-ultra .nav-shell,.perf-ultra .toast{backdrop-filter:none}
+.debug-list{display:grid;gap:8px}
+.debug-item{display:grid;grid-template-columns:10px 1fr auto;gap:9px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.018)}
+.debug-item i{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 12px currentColor}
+.debug-item.ok i{background:var(--good)}.debug-item.bad i{background:var(--bad)}
+.debug-item b{font-size:11px}.debug-item span{font-size:10px;color:var(--muted)}
+</style>
 </head>
 <body>
 <canvas id="bg"></canvas>
@@ -704,6 +710,12 @@ button,input{touch-action:manipulation}
       <div class="card kpi"><div class="label">Deployment ID</div><div id="deployment" class="value" style="font-size:12px;word-break:break-all">—</div></div>
       <div class="card kpi"><div class="label">Monitor Port</div><div id="monitorPort" class="value">—</div></div>
     </div>
+    <div class="card section">
+      <div class="title"><h2>🧪 AUTO DEBUG</h2><span class="meta">تحلیل خودکار وضعیت فعلی</span></div>
+      <div id="debugSummary" class="notice">در حال تحلیل...</div>
+      <div id="debugList" class="debug-list" style="margin-top:10px"></div>
+    </div>
+
     <div class="grid2 section">
       <div class="card">
         <div class="title"><h2>⚙ جزئیات سیستم</h2><span class="meta">بدون نمایش Secretها</span></div>
@@ -772,6 +784,22 @@ function healthBox(id,ok,text){
   el.classList.toggle("ok",!!ok);el.classList.toggle("bad",!ok);
   const state=el.querySelector(".state");if(state)state.textContent=text;
 }
+function renderDebug(status,diag){
+  if(!$("debugSummary")||!$("debugList"))return;
+  const checks=[
+    {ok:!!status&&status.status==="online",name:"Runtime",detail:status&&status.status==="online"?"سرویس آنلاین":"ارتباط با Runtime برقرار نیست"},
+    {ok:!!(status&&status.telegram_connected),name:"Telegram",detail:status&&status.telegram_connected?"اتصال برقرار":"اتصال برقرار نیست"},
+    {ok:!!(status&&status.handlers_registered),name:"Handlers",detail:status&&status.handlers_registered?"Handlerهای اصلی فعال‌اند":"Handlerها کامل فعال نیستند"},
+    {ok:!(status&&status.processing_enabled===false),name:"Processing",detail:status&&status.processing_enabled===false?"پردازش از پنل متوقف است":"پردازش فعال است"},
+    {ok:!!(diag&&diag.storage&&diag.storage.data_file_exists&&diag.storage.data_file_writable),name:"data.json",detail:diag&&diag.storage&&diag.storage.data_file_exists?"فایل داده در دسترس است":"فایل داده نیاز به بررسی دارد"},
+    {ok:!!(diag&&diag.storage&&diag.storage.admin_sessions_dir_exists&&diag.storage.admin_sessions_writable),name:"Sessions",detail:diag&&diag.storage&&diag.storage.admin_sessions_dir_exists?"پوشه Sessionها در دسترس است":"پوشه Sessionها نیاز به بررسی دارد"},
+    {ok:totalErrors(status&&status.handler_errors)===0,name:"Handler errors",detail:totalErrors(status&&status.handler_errors)===0?"خطای ثبت‌شده: ۰":"خطای ثبت‌شده: "+totalErrors(status&&status.handler_errors)}
+  ];
+  const bad=checks.filter(x=>!x.ok).length;
+  $("debugSummary").textContent=bad?("⚠ "+bad+" مورد نیازمند بررسی است"):"✓ همه بررسی‌های اصلی سالم هستند";
+  $("debugList").innerHTML=checks.map(x=>'<div class="debug-item '+(x.ok?"ok":"bad")+'"><i></i><div><b>'+esc(x.name)+'</b><br><span>'+esc(x.detail)+'</span></div><span>'+(x.ok?"OK":"CHECK")+'</span></div>').join("");
+}
+
 function totalErrors(obj){return Object.values(obj||{}).reduce((a,b)=>a+Number(b||0),0);}
 function setStale(stale){
   const el=$("stalePill");if(!el)return;
@@ -914,6 +942,7 @@ async function loadStatus(){
     $("lastEvent").textContent=(b.last_event_type||"—")+" • "+fmtDate(b.last_event_at);
     $("lastUser").textContent=b.last_event_user_id??"—";
     $("handlerErrors").textContent=totalErrors(b.handler_errors);
+    renderDebug(b,lastDiagnostics);
     $("evStart").textContent=Number(b.event_counts?.start||0).toLocaleString("fa-IR");
     $("evCallback").textContent=Number(b.event_counts?.callback||0).toLocaleString("fa-IR");
     $("evMessage").textContent=Number(b.event_counts?.message||0).toLocaleString("fa-IR");
@@ -953,6 +982,7 @@ async function loadDiagnostics(){
       ["sessions/",s.admin_sessions_dir_exists&&s.admin_sessions_writable]
     ].map(x=>'<div class="health '+(x[1]?"ok":"bad")+'"><span class="name">'+esc(x[0])+'</span><span class="state">'+(x[1]?"سالم":"بررسی لازم")+'</span></div>').join("");
     $("systemInfo").textContent=JSON.stringify(j,null,2);
+    renderDebug(lastStatus||j,j);
     $("storageInfo").innerHTML=[
       ["پوشه داده",s.data_dir||"—",true],
       ["data.json",s.data_file_exists?"وجود دارد":"وجود ندارد",s.data_file_exists&&s.data_file_writable],
