@@ -3,6 +3,10 @@ import asyncio
 import smtplib
 import json
 import logging
+import hmac
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 import pytz
@@ -47,6 +51,11 @@ logging.basicConfig(
     encoding='utf-8'
 )
 logger = logging.getLogger(__name__)
+
+MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "")
+MONITOR_PORT = int(os.getenv("MONITOR_PORT", "8080"))
+BOT_STARTED_AT = None
+MONITOR_SERVER = None
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -1675,9 +1684,162 @@ async def execute_report_operation(event, state, user_id, lang):
 
     await event.reply(result)
 
+
+def _tail_log_file(lines=100):
+    try:
+        lines = max(1, min(int(lines), 300))
+    except (TypeError, ValueError):
+        lines = 100
+
+    log_path = os.path.join(DATA_DIR, "bot.log")
+    if not os.path.exists(log_path):
+        return []
+
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+            return f.readlines()[-lines:]
+    except Exception:
+        return []
+
+
+def _session_count():
+    count = 0
+    try:
+        for root, _, files in os.walk(ADMIN_SESSIONS_DIR):
+            count += sum(1 for name in files if name.endswith(".session"))
+    except Exception:
+        pass
+    return count
+
+
+class MonitorHandler(BaseHTTPRequestHandler):
+    server_version = "ReporterMonitor/1.0"
+
+    def _send_json(self, status_code, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _authorized(self):
+        if not MONITOR_TOKEN:
+            return False
+        supplied = self.headers.get("X-Monitor-Token", "")
+        try:
+            return hmac.compare_digest(supplied, MONITOR_TOKEN)
+        except Exception:
+            return False
+
+    def do_GET(self):
+        try:
+            parsed = urlparse(self.path)
+
+            if parsed.path == "/health":
+                self._send_json(200, {
+                    "status": "ok",
+                    "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter")
+                })
+                return
+
+            if not self._authorized():
+                self._send_json(401, {"error": "unauthorized"})
+                return
+
+            if parsed.path == "/api/status":
+                data = load_data()
+                now_tehran = datetime.now(pytz.timezone("Asia/Tehran"))
+                admins = data.get("admins", {})
+                active_admins = 0
+
+                for info in admins.values():
+                    try:
+                        if info.get("expires") and info["expires"] > now_tehran:
+                            active_admins += 1
+                    except Exception:
+                        pass
+
+                uptime_seconds = 0
+                if BOT_STARTED_AT is not None:
+                    uptime_seconds = max(
+                        0,
+                        int((datetime.now(pytz.UTC) - BOT_STARTED_AT).total_seconds())
+                    )
+
+                telegram_connected = False
+                try:
+                    telegram_connected = bool(bot_instance.is_connected())
+                except Exception:
+                    pass
+
+                self._send_json(200, {
+                    "status": "online",
+                    "telegram_connected": telegram_connected,
+                    "started_at": BOT_STARTED_AT.isoformat() if BOT_STARTED_AT else None,
+                    "uptime_seconds": uptime_seconds,
+                    "users": len(data.get("users", [])),
+                    "admins": len(admins),
+                    "active_admins": active_admins,
+                    "sessions": _session_count(),
+                    "send_today": data.get("send_today", 0),
+                    "send_week": data.get("send_week", 0),
+                    "bot_status": data.get("bot_status", "on"),
+                    "smtp_status": data.get("global_smtp_status", "on"),
+                    "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter"),
+                    "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
+                    "region": os.getenv("RAILWAY_REGION", ""),
+                    "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
+                    "monitor_port": MONITOR_PORT
+                })
+                return
+
+            if parsed.path == "/api/logs":
+                params = parse_qs(parsed.query)
+                lines = params.get("lines", ["100"])[0]
+                self._send_json(200, {"lines": _tail_log_file(lines)})
+                return
+
+            self._send_json(404, {"error": "not_found"})
+        except Exception:
+            logger.exception("Monitor HTTP error")
+            try:
+                self._send_json(500, {"error": "monitor_error"})
+            except Exception:
+                pass
+
+    def log_message(self, format, *args):
+        return
+
+
+def start_monitor_server():
+    if not MONITOR_TOKEN:
+        logger.warning("MONITOR_TOKEN is not configured; monitoring API is disabled.")
+        return None
+
+    try:
+        server = ThreadingHTTPServer(("0.0.0.0", MONITOR_PORT), MonitorHandler)
+        thread = threading.Thread(
+            target=server.serve_forever,
+            name="monitor-http",
+            daemon=True
+        )
+        thread.start()
+        logger.info("Monitoring API started on port %s", MONITOR_PORT)
+        return server
+    except Exception:
+        logger.exception("Monitoring API could not start; Telegram bot will continue.")
+        return None
+
+
 async def main():
+    global bot, bot_instance, BOT_STARTED_AT, MONITOR_SERVER
     bot = TelegramClient(BOT_SESSION_PATH, API_ID, API_HASH)
+    bot_instance = bot
     await bot.start(bot_token=BOT_TOKEN)
+    BOT_STARTED_AT = datetime.now(pytz.UTC)
+    MONITOR_SERVER = start_monitor_server()
     logger.info("Bot started")
 
     bot.add_event_handler(start_handler, events.NewMessage(pattern=r'/start(?: (.+))?'))
@@ -1685,7 +1847,14 @@ async def main():
     bot.add_event_handler(message_handler, events.NewMessage(func=lambda e: e.is_private and not e.text.startswith('/')))
 
     logger.info("SHIKH REPORTER is running...")
-    await bot.run_until_disconnected()
+    try:
+        await bot.run_until_disconnected()
+    finally:
+        if MONITOR_SERVER is not None:
+            try:
+                MONITOR_SERVER.shutdown()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     asyncio.run(main())
