@@ -420,6 +420,53 @@ button,input{touch-action:manipulation}
 .debug-item i{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 12px currentColor}
 .debug-item.ok i{background:var(--good)}.debug-item.bad i{background:var(--bad)}
 .debug-item b{font-size:11px}.debug-item span{font-size:10px;color:var(--muted)}
+/* v5 mobile-first performance + command ergonomics */
+.mobile-dock{display:none}
+.perf-badge{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.35px}
+.desktop-hide-mobile{display:inline-flex}
+body{overscroll-behavior-y:none}
+.card,.nav-shell{contain:layout paint}
+@media (max-width:720px){
+  body{padding-bottom:78px}
+  .wrap{padding:10px}
+  .topbar{gap:10px;margin-bottom:10px}
+  .brand{gap:10px}
+  .brandmark{flex:0 0 44px}
+  .brand p{font-size:10px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .header-actions{gap:5px}
+  .header-actions .desktop-hide-mobile{display:none}
+  .header-actions .live{padding:7px 9px;font-size:10px}
+  .header-actions button{padding:8px 10px;font-size:11px}
+  .nav-shell{margin-bottom:10px;border-radius:14px}
+  .nav{gap:3px}
+  .nav button{padding:9px 10px;font-size:11px}
+  .hero{min-height:0}
+  .hero-actions{gap:6px}
+  .hero-actions button{flex:1;min-width:120px}
+  .visual{min-height:205px}
+  .warning-ticker{font-size:8px;white-space:nowrap}
+  .section-ribbon{font-size:9px}
+  .chart-wrap{height:185px}
+  .donut-wrap{gap:12px}
+  .donut{width:116px;height:116px;flex-basis:116px}
+  .donut:before{width:74px;height:74px}
+  .timeline{max-height:260px}
+  .logbox{height:430px;font-size:10px;padding:12px}
+  .table-wrap{-webkit-overflow-scrolling:touch}
+  .mobile-dock{
+    position:fixed;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;left:9px;right:9px;bottom:max(9px,env(safe-area-inset-bottom));
+    z-index:80;padding:6px;border:1px solid rgba(255,92,110,.18);border-radius:17px;
+    background:rgba(3,6,11,.90);box-shadow:0 18px 60px rgba(0,0,0,.55);backdrop-filter:blur(14px)
+  }
+  .mobile-dock button{
+    min-width:0;padding:9px 4px;border:1px solid transparent;background:transparent;box-shadow:none;
+    color:#8ea0ba;border-radius:12px;font-size:10px
+  }
+  .mobile-dock button.active{color:#fff;background:linear-gradient(135deg,rgba(255,49,84,.15),rgba(110,168,255,.08));border-color:rgba(255,92,110,.15)}
+}
+@media (prefers-reduced-motion:reduce){
+  .mobile-dock{backdrop-filter:none}
+}
 </style>
 </head>
 <body>
@@ -442,6 +489,7 @@ button,input{touch-action:manipulation}
       <span class="live" id="livePill"><span class="live-dot"></span><span>در حال بررسی</span></span>
       <span class="live" id="latencyPill">⚡ API: —</span>
 <span class="live" id="threeDPill">◈ 3D: روشن</span>
+      <span class="live perf-badge" id="perfPill">⚡ PERF: AUTO</span>
       <button onclick="toggleAuto()" id="autoBtn">⟳ خودکار: روشن</button>
       <button onclick="refreshAll()">↻ بروزرسانی</button>
       <button onclick="toggleFullscreen()" id="fullscreenBtn" title="تمام صفحه">⛶ تمام‌صفحه</button>
@@ -733,6 +781,13 @@ button,input{touch-action:manipulation}
 </div>
 <div id="toast" class="toast"></div>
 
+<div class="mobile-dock" id="mobileDock" aria-label="ناوبری سریع موبایل">
+  <button data-mobile-tab="overview" onclick="tab('overview')">◈<br>خانه</button>
+  <button data-mobile-tab="users" onclick="tab('users')">◉<br>کاربران</button>
+  <button data-mobile-tab="logs" onclick="tab('logs')">⌘<br>لاگ</button>
+  <button data-mobile-tab="analytics" onclick="tab('analytics')">◌<br>تحلیل</button>
+  <button data-mobile-tab="system" onclick="tab('system')">⚙<br>سیستم</button>
+</div>
 <script>
 
 const $=id=>document.getElementById(id);
@@ -749,6 +804,12 @@ const PERF_LITE=PERF.reduced||PERF.saveData||PERF.cores<=4||PERF.memory<=4;
 const PERF_ULTRA=PERF.saveData||(PERF.cores<=2&&PERF.memory<=2);
 document.documentElement.classList.toggle("perf-lite",PERF_LITE);
 document.documentElement.classList.toggle("perf-ultra",PERF_ULTRA);
+(function initPerfBadge(){
+  const el=$("perfPill"); if(!el)return;
+  const mode=PERF_ULTRA?"ULTRA-LITE":PERF_LITE?"LITE":"FULL";
+  el.textContent="⚡ PERF: "+mode;
+  el.title="Automatic performance profile • "+PERF.cores+" cores • "+PERF.memory+"GB memory";
+})();
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 function nowFa(){return new Date().toLocaleTimeString("fa-IR");}
@@ -772,6 +833,7 @@ function tab(name,save=true){
   if(name==="channels")loadChannels();
   if(name==="logs")loadLogs();
   if(name==="analytics")renderAnalytics();
+  document.querySelectorAll("[data-mobile-tab]").forEach(x=>x.classList.toggle("active",x.dataset.mobileTab===name));
 }
 function fmtUptime(sec){
   let s=Math.max(0,Number(sec||0));const d=Math.floor(s/86400);s%=86400;
@@ -903,7 +965,8 @@ function clearLogFilter(){$("logFilter").value="";setLogLevel("all");}
 function renderRecentLogs(){const recent=cachedLogs.slice(-10).map(translateLog).join("\n");$("recentLogs").textContent=recent||"لاگی ثبت نشده است.";}
 async function loadLogs(showError=true){
   try{
-    const j=await apiFetch("/api/logs?lines=300",{timeout:7000,retries:1});
+    const lines=PERF_ULTRA?80:(PERF_LITE?160:300);
+    const j=await apiFetch("/api/logs?lines="+lines,{timeout:7000,retries:1});
     cachedLogs=Array.isArray(j.lines)?j.lines:[];
     renderLogs(cachedLogs);renderRecentLogs();
   }catch(e){
@@ -1014,7 +1077,8 @@ async function loadUsers(){
   if(document.visibilityState==="hidden")return;
   try{
     const q=encodeURIComponent(($("userSearch").value||"").trim());
-    const j=await apiFetch("/api/users?q="+q+"&limit=500",{timeout:9000,retries:1});
+    const limit=PERF_ULTRA?100:(PERF_LITE?220:500);
+    const j=await apiFetch("/api/users?q="+q+"&limit="+limit,{timeout:9000,retries:1});
     const body=$("usersBody");body.innerHTML="";
     (j.users||[]).forEach(u=>{
       const id=Number(u.id);const role=u.owner?"♛ مالک":u.admin?"🛡 مدیر":"👤 کاربر";const st=u.blocked?"🚫 بلاک":"✅ فعال";
@@ -1118,7 +1182,7 @@ function updateAdvancedTelemetry(b){
   $("aSessions").textContent=Number(b?.sessions||0).toLocaleString("fa-IR");
   $("aUsers").textContent=Number(b?.users||0).toLocaleString("fa-IR");
   $("aAdmins").textContent=Number(b?.admins||0).toLocaleString("fa-IR");
-  renderAnalytics();
+  if(tabName==="analytics")renderAnalytics();
 }
 function renderAnalytics(){
   if(!$("telemetryChart")||!lastStatus)return;
@@ -1190,8 +1254,13 @@ document.addEventListener("fullscreenchange",()=>{
 
 async function refreshAll(show=true){
   const started=performance.now();
-  await Promise.allSettled([loadStatus(),loadDiagnostics(),loadLogs(false),loadUsers(),loadAdmins(),loadChannels()]);
-  if(show)showToast("اطلاعات کامل بروزرسانی شد • "+Math.round(performance.now()-started)+"ms");
+  const jobs=[loadStatus(),loadDiagnostics()];
+  if(tabName==="overview"||tabName==="logs")jobs.push(loadLogs(false));
+  if(tabName==="users")jobs.push(loadUsers());
+  if(tabName==="admins")jobs.push(loadAdmins());
+  if(tabName==="channels")jobs.push(loadChannels());
+  await Promise.allSettled(jobs);
+  if(show)showToast("اطلاعات بروزرسانی شد • "+Math.round(performance.now()-started)+"ms");
 }
 function toggleAuto(){
   auto=!auto;
@@ -1222,19 +1291,22 @@ document.addEventListener("keydown",e=>{
 });
 (function initCanvas(){
   const c=$("bg"),ctx=c.getContext("2d",{alpha:true});if(!ctx)return;
-  let pts=[],w=0,h=0,raf=0,running=false;
+  let pts=[],w=0,h=0,raf=0,running=false,lastFrame=0;
   const reduce=PERF.reduced;
+  const frameGap=PERF_ULTRA?90:(PERF_LITE?50:34);
   function resize(){
-    const d=Math.min(PERF_ULTRA?1:2,devicePixelRatio||1);
+    const d=Math.min(PERF_ULTRA?1:1.5,devicePixelRatio||1);
     w=c.width=Math.floor(innerWidth*d);h=c.height=Math.floor(innerHeight*d);
-    const count=reduce?0:(PERF_ULTRA?10:(PERF_LITE?20:Math.min(55,Math.floor(innerWidth/24))));
-    pts=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*(PERF_LITE?.07:.12)*d,vy:(Math.random()-.5)*(PERF_LITE?.07:.12)*d,r:(.5+Math.random()*(PERF_LITE?.8:1.5))*d}));
+    const count=reduce?0:(PERF_ULTRA?6:(PERF_LITE?14:Math.min(42,Math.floor(innerWidth/28))));
+    pts=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*(PERF_LITE?.055:.09)*d,vy:(Math.random()-.5)*(PERF_LITE?.055:.09)*d,r:(.5+Math.random()*(PERF_LITE?.7:1.2))*d}));
   }
-  function frame(){
+  function frame(ts){
     if(!running)return;
+    if(ts-lastFrame<frameGap){raf=requestAnimationFrame(frame);return;}
+    lastFrame=ts;
     ctx.clearRect(0,0,w,h);
     if(pts.length){
-      ctx.fillStyle="rgba(120,165,255,.32)";
+      ctx.fillStyle="rgba(120,165,255,.26)";
       for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
     }
     raf=requestAnimationFrame(frame);
@@ -1249,7 +1321,7 @@ startTimers();
 
 
 (function initThreatMotion(){
-  if(PERF.reduced||PERF_ULTRA)return;
+  if(PERF.reduced||PERF_ULTRA||PERF.touch)return;
   const blips=[...document.querySelectorAll(".target-blip")];
   let t=0;
   setInterval(()=>{
@@ -1262,7 +1334,10 @@ startTimers();
 (function init3D(){
   const reduce=PERF.reduced||PERF_ULTRA;
   const root=document.documentElement;
-  if(reduce){if($("threeDPill"))$("threeDPill").textContent=PERF.reduced?"◈ 3D: کم‌حرکت":"◈ 3D: سبک";return;}
+  if(reduce||PERF.touch||PERF_LITE){
+    if($("threeDPill"))$("threeDPill").textContent=PERF.reduced?"◈ 3D: کم‌حرکت":PERF.touch?"◈ 3D: ثابت":"◈ 3D: سبک";
+    return;
+  }
   const hoverCards=[...document.querySelectorAll(".card,.hero")];
   let raf=0,mx=0,my=0,hovered=null;
   addEventListener("pointermove",e=>{
