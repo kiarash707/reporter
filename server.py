@@ -3,7 +3,7 @@ import json
 import os
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -12,6 +12,15 @@ MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "")
 DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
 PORT = int(os.getenv("PORT", "8080"))
+REQUEST_TIMEOUT = max(2, min(20, int(os.getenv("REQUEST_TIMEOUT", "8"))))
+
+# The dashboard is a private operations console; browsers should never cache its data.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+}
 
 with open(os.path.join(os.path.dirname(__file__), "index.html"), "r", encoding="utf-8") as f:
     INDEX_HTML = f.read()
@@ -32,7 +41,7 @@ def bot_request(path, timeout=4, method="GET", payload=None):
     if payload is not None:
         request.data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         request.add_header("Content-Type", "application/json; charset=utf-8")
-    with urlopen(request, timeout=timeout) as response:
+    with urlopen(request, timeout=min(timeout, REQUEST_TIMEOUT)) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -70,6 +79,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        for key, value in SECURITY_HEADERS.items():
+            self.send_header(key, value)
+        self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'")
+        for key, value in SECURITY_HEADERS.items():
+            self.send_header(key, value)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -102,9 +116,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/users":
                 params = parse_qs(parsed.query)
-                data = bot_request("/api/users?" + "&".join(
-                    f"{k}={v[0]}" for k, v in params.items()
-                ))
+                safe_query = urlencode({k: v[0] for k, v in params.items() if k in ("q", "limit")})
+                data = bot_request("/api/users" + (("?" + safe_query) if safe_query else ""))
                 self.send_json(200, data)
                 return
 
@@ -114,6 +127,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/channels":
                 self.send_json(200, bot_request("/api/channels"))
+                return
+
+            if parsed.path == "/api/diagnostics":
+                self.send_json(200, bot_request("/api/diagnostics"))
                 return
 
             if parsed.path == "/api/status":
@@ -177,6 +194,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    ThreadingHTTPServer.allow_reuse_address = True
+    ThreadingHTTPServer.daemon_threads = True
     server = ThreadingHTTPServer(("0.0.0.0", PORT), DashboardHandler)
     print(f"Reporter Dashboard listening on port {PORT}")
     print(f"Bot internal endpoint: {BOT_INTERNAL_URL}")
