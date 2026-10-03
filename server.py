@@ -36,7 +36,7 @@ def bot_request(path, timeout=4, method="GET", payload=None):
         f"{BOT_INTERNAL_URL}{path}",
         headers={
             "X-Monitor-Token": MONITOR_TOKEN,
-            "User-Agent": "ReporterDashboard/1.0"
+            "User-Agent": "ReporterDashboard/3.1"
         },
         method=method
     )
@@ -55,6 +55,8 @@ def authorized(handler):
     if not header.startswith("Basic "):
         handler.send_response(401)
         handler.send_header("WWW-Authenticate", 'Basic realm="Reporter Dashboard"')
+        handler.send_header("Cache-Control", "no-store")
+        handler.send_header("X-Content-Type-Options", "nosniff")
         handler.end_headers()
         return False
 
@@ -67,6 +69,8 @@ def authorized(handler):
     if username != DASHBOARD_USER or password != DASHBOARD_PASSWORD:
         handler.send_response(401)
         handler.send_header("WWW-Authenticate", 'Basic realm="Reporter Dashboard"')
+        handler.send_header("Cache-Control", "no-store")
+        handler.send_header("X-Content-Type-Options", "nosniff")
         handler.end_headers()
         return False
 
@@ -74,7 +78,7 @@ def authorized(handler):
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    server_version = "ReporterDashboard/1.0"
+    server_version = "ReporterDashboard/3.1"
 
     def send_json(self, status_code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
