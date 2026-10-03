@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+bot_session.session
+bot_session.session-journal
+bot.log
+data.json
+admin_sessions/
+.env
+.venv/
+venv/
