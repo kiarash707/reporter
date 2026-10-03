@@ -37,7 +37,7 @@ button:hover{background:#20304d}
 <header>
 <div>
 <h1>Reporter Control Dashboard</h1>
-<div class="sub">مانیتور مستقل وضعیت، اتصال Telegram و لاگ‌های ربات</div>
+<div class="sub">مانیتور مستقل وضعیت، اتصال Telegram، عملکرد و لاگ‌های ربات</div>
 </div>
 <div class="actions">
 <button onclick="refreshAll()">↻ بروزرسانی</button>
@@ -48,23 +48,23 @@ button:hover{background:#20304d}
 <div class="card" style="margin-bottom:14px">
 <div class="label">وضعیت اصلی</div>
 <div id="overall" class="pill"><span class="dot"></span><span>در حال بررسی...</span></div>
-<div id="updated" class="notice">—</div>
+<div id="updated" class="notice">—</div><div id="explain" class="notice">در حال بررسی وضعیت عملیاتی ربات...</div>
 </div>
 
 <div class="grid">
-<div class="card"><div class="label">Uptime</div><div id="uptime" class="value">—</div></div>
+<div class="card"><div class="label">زمان فعالیت</div><div id="uptime" class="value">—</div></div>
 <div class="card"><div class="label">اتصال Telegram</div><div id="telegram" class="value">—</div></div>
 <div class="card"><div class="label">کاربران</div><div id="users" class="value">—</div></div>
-<div class="card"><div class="label">Admin فعال</div><div id="admins" class="value">—</div></div>
-<div class="card"><div class="label">Sessionها</div><div id="sessions" class="value">—</div></div>
-<div class="card"><div class="label">ارسال امروز</div><div id="today" class="value">—</div></div>
-<div class="card"><div class="label">ارسال این هفته</div><div id="week" class="value">—</div></div>
-<div class="card"><div class="label">Region</div><div id="region" class="value" style="font-size:18px">—</div></div>
+<div class="card"><div class="label">ادمین فعال / کل</div><div id="admins" class="value">—</div></div>
+<div class="card"><div class="label">نشست‌ها</div><div id="sessions" class="value">—</div></div>
+<div class="card"><div class="label">عملیات امروز</div><div id="today" class="value">—</div></div>
+<div class="card"><div class="label">عملیات این هفته</div><div id="week" class="value">—</div></div>
+<div class="card"><div class="label">منطقه سرور</div><div id="region" class="value" style="font-size:18px">—</div></div>
 </div>
 
 <div class="section card">
 <div class="section-title">
-<h2>لاگ زنده</h2>
+<h2>لاگ زنده و توضیح عملکرد</h2>
 <div id="logMeta" class="meta">آخرین 120 خط</div>
 </div>
 <div id="logs" class="logbox">در حال دریافت لاگ...</div>
@@ -76,6 +76,33 @@ button:hover{background:#20304d}
 <script>
 let auto=true, statusTimer, logTimer;
 const $=id=>document.getElementById(id);
+
+function translateLog(line){
+  let s=String(line||"").trim();
+  if(!s) return "";
+  s=s.replace(/DEBUG/g,"اشکال‌زدایی").replace(/INFO/g,"اطلاعات").replace(/WARNING/g,"هشدار").replace(/ERROR/g,"خطا").replace(/CRITICAL/g,"بحرانی");
+  const map=[
+    [/Bot started/i,"ربات با موفقیت راه‌اندازی شد"],
+    [/SHIKH REPORTER is running/i,"ربات در حال اجراست و آماده دریافت پیام است"],
+    [/Monitoring API started on port (\\d+)/i,function(m,p){return "سرویس مانیتورینگ روی پورت "+p+" فعال شد";}],
+    [/MONITOR_TOKEN is not configured/i,"توکن مانیتورینگ تنظیم نشده؛ مانیتورینگ غیرفعال است"],
+    [/Monitoring API could not start/i,"سرویس مانیتورینگ بالا نیامد؛ خود ربات همچنان ادامه می‌دهد"],
+    [/Monitor HTTP error/i,"خطا در سرویس مانیتورینگ HTTP"],
+    [/Starting report operation/i,"شروع عملیات گزارش"],
+    [/Report Operation Complete/i,"عملیات گزارش به پایان رسید"],
+    [/Missing required environment variables/i,"تنظیمات ضروری محیطی ناقص است"],
+    [/Unable to reach bot monitoring API/i,"ارتباط داشبورد با API داخلی ربات برقرار نشد"]
+  ];
+  for(const [re,rep] of map){ if(re.test(s)){ s=s.replace(re,rep); break; } }
+  return s;
+}
+
+function explainStatus(b){
+  if(!b) return "اطلاعاتی از ربات دریافت نشد.";
+  if(b.status!=="online") return "سرویس ربات آنلاین نیست یا API مانیتورینگ پاسخ نمی‌دهد.";
+  if(!b.telegram_connected) return "خود سرویس روشن است، اما اتصال Telegram برقرار نیست؛ وضعیت اتصال را بررسی کنید.";
+  return "ربات عملیاتی است؛ اتصال Telegram برقرار است، "+Number(b.users||0).toLocaleString("fa-IR")+" کاربر ثبت شده و "+Number(b.sessions||0).toLocaleString("fa-IR")+" نشست ذخیره شده دارد.";
+}
 
 function fmtUptime(sec){
   sec=Math.max(0,Number(sec||0));
@@ -108,14 +135,17 @@ async function loadStatus(){
       $("week").textContent=(b.send_week??0).toLocaleString("fa-IR");
       $("region").textContent=b.region||"—";
       $("updated").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
+      $("explain").textContent=explainStatus(b);
     }else{
       setOverall(false,"ارتباط با ربات برقرار نیست");
       $("telegram").textContent="نامشخص"; $("telegram").className="value bad";
-      $("updated").textContent="Dashboard سالم است، ولی Bot API پاسخ نمی‌دهد.";
+      $("updated").textContent="داشبورد سالم است، ولی API ربات پاسخ نمی‌دهد.";
+      $("explain").textContent="این وضعیت به معنی خراب بودن خود داشبورد نیست؛ ارتباط بین داشبورد و سرویس ربات باید بررسی شود.";
     }
   }catch(e){
     setOverall(false,"خطای داشبورد");
     $("updated").textContent="خطا در دریافت وضعیت: "+e.message;
+    $("explain").textContent="داشبورد نتوانست وضعیت ربات را دریافت کند.";
   }
 }
 
@@ -123,11 +153,11 @@ async function loadLogs(){
   try{
     const r=await fetch("/api/logs?lines=120",{cache:"no-store"});
     const j=await r.json();
-    $("logs").textContent=(j.lines||[]).join("");
+    $("logs").textContent=(j.lines||[]).map(translateLog).join("\n");
     $("logs").scrollTop=$("logs").scrollHeight;
     $("logMeta").textContent="آخرین "+(j.lines||[]).length+" خط • "+new Date().toLocaleTimeString("fa-IR");
   }catch(e){
-    $("logs").textContent="[dashboard] "+e.message;
+    $("logs").textContent="[داشبورد] خطا در دریافت لاگ: "+e.message;
   }
 }
 
