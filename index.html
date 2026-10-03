@@ -219,6 +219,39 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
 @keyframes ringPulse{0%,100%{opacity:.15;transform:translate(-50%,-50%) rotateX(72deg) scale(.96)}50%{opacity:.30;transform:translate(-50%,-50%) rotateX(72deg) scale(1.02)}}
 @keyframes heroSweep{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.orb,.grid-floor,.scan-ring,.hero:after{animation:none!important}}
+
+/* v3 elite operations layer */
+.pro-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+.telemetry-card{min-height:150px}
+.telemetry-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.telemetry-value{font-size:28px;font-weight:850;letter-spacing:-.8px}
+.telemetry-sub{font-size:11px;color:var(--muted)}
+.chart-wrap{height:210px;position:relative;border:1px solid var(--line);border-radius:16px;background:rgba(3,7,12,.48);overflow:hidden}
+.chart-wrap canvas{display:block;width:100%;height:100%}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted)}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;margin-left:4px}
+.donut-wrap{display:flex;align-items:center;gap:18px;min-height:180px}
+.donut{width:142px;height:142px;flex:0 0 142px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) 0 0%,rgba(255,255,255,.06) 0 100%);box-shadow:0 0 40px rgba(100,160,255,.08)}
+.donut:before{content:"";width:92px;height:92px;border-radius:50%;background:#07101a;border:1px solid var(--line);box-shadow:inset 0 0 30px rgba(0,0,0,.25)}
+.donut-center{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
+.donut-center strong{font-size:20px}.donut-center span{font-size:10px;color:var(--muted)}
+.donut-labels{display:grid;gap:8px;min-width:0}.donut-label{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:11px}.donut-label b{font-size:12px}
+.timeline{display:grid;gap:8px;max-height:320px;overflow:auto;padding-left:3px}
+.timeline-item{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:9px;padding:9px 10px;border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.018)}
+.timeline-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px currentColor}
+.timeline-item.good .timeline-dot{background:var(--good)}.timeline-item.warn .timeline-dot{background:var(--warn)}.timeline-item.bad .timeline-dot{background:var(--bad)}
+.timeline-item b{font-size:11px}.timeline-item span{font-size:10px;color:var(--muted)}
+.action-strip{display:flex;gap:8px;flex-wrap:wrap}
+.action-strip button{flex:1;min-width:145px}
+.icon-btn{width:42px;height:42px;padding:0;display:grid;place-items:center}
+.command-hint{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted)}
+.kbd{display:inline-flex;min-width:22px;justify-content:center;padding:3px 6px;border-radius:7px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.04);font:10px ui-monospace,SFMono-Regular,Menlo,monospace;color:#c7d4e6}
+.flash{animation:flashPulse .75s ease}
+@keyframes flashPulse{0%{box-shadow:0 0 0 0 rgba(110,168,255,.25)}100%{box-shadow:0 0 0 14px rgba(110,168,255,0)}}
+@media(max-width:1100px){.pro-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.span-7,.span-8{grid-column:span 6}.span-5{grid-column:span 6}.span-4,.span-3{grid-column:span 3}}
+@media(max-width:720px){.pro-grid{grid-template-columns:1fr}.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:span 1}.donut-wrap{justify-content:center;flex-wrap:wrap}}
+
 </style>
 </head>
 <body>
@@ -243,6 +276,7 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
 <span class="live" id="threeDPill">◈ 3D: روشن</span>
       <button onclick="toggleAuto()" id="autoBtn">⟳ خودکار: روشن</button>
       <button onclick="refreshAll()">↻ بروزرسانی</button>
+      <button onclick="toggleFullscreen()" id="fullscreenBtn" title="تمام صفحه">⛶ تمام‌صفحه</button>
       <button onclick="controlBot('restart')" id="restartTop">🔄 Restart</button>
     </div>
   </header>
@@ -254,6 +288,7 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
       <button data-tab="admins" onclick="tab('admins')">♛ مدیران</button>
       <button data-tab="channels" onclick="tab('channels')">◌ کانال‌ها</button>
       <button data-tab="logs" onclick="tab('logs')">⌘ لاگ زنده</button>
+      <button data-tab="analytics" onclick="tab('analytics')">◈ تحلیل زنده</button>
       <button data-tab="system" onclick="tab('system')">⚙ سیستم</button>
     </nav>
   </div>
@@ -339,6 +374,37 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
         <div id="recentLogs" class="system-code" style="max-height:245px"></div>
       </div>
     </div>
+
+    <div class="pro-grid section">
+      <div class="card telemetry-card span-3">
+        <div class="telemetry-head"><div><div class="label">سلامت سرویس</div><div id="healthPct" class="telemetry-value">—</div></div><span class="pill" id="healthState">در حال بررسی</span></div>
+        <div class="progress"><span id="healthProgress"></span></div>
+        <div class="telemetry-sub" id="healthMeta">ترکیب اتصال، Handler، پردازش و خطاها</div>
+      </div>
+      <div class="card telemetry-card span-3">
+        <div class="telemetry-head"><div><div class="label">سرعت API</div><div id="apiSpeed" class="telemetry-value">—</div></div><span class="pill">RTT</span></div>
+        <div class="telemetry-sub" id="apiSpeedMeta">میانگین لحظه‌ای درخواست‌ها</div>
+      </div>
+      <div class="card telemetry-card span-3">
+        <div class="telemetry-head"><div><div class="label">رویدادها</div><div id="eventTotal" class="telemetry-value">—</div></div><span class="pill" id="eventRate">— / دقیقه</span></div>
+        <div class="telemetry-sub">/start + callback + پیام خصوصی</div>
+      </div>
+      <div class="card telemetry-card span-3">
+        <div class="telemetry-head"><div><div class="label">آخرین فعالیت</div><div id="eventAge" class="telemetry-value">—</div></div><span class="pill">LIVE</span></div>
+        <div class="telemetry-sub" id="eventAgeMeta">بر اساس آخرین Event ثبت‌شده</div>
+      </div>
+    </div>
+
+    <div class="card section">
+      <div class="title"><h2>⚡ Snapshot لحظه‌ای</h2><span class="meta">بدون نیاز به رفرش صفحه</span></div>
+      <div class="action-strip">
+        <button onclick="copyDiagnostics()">📋 کپی Diagnostics</button>
+        <button onclick="exportLogs()">⇩ خروجی لاگ‌ها</button>
+        <button onclick="exportSnapshot()">⇩ خروجی وضعیت</button>
+        <button onclick="toggleFullscreen()">⛶ حالت تمام‌صفحه</button>
+      </div>
+      <div class="command-hint" style="margin-top:10px">میانبرها: <span class="kbd">R</span> بروزرسانی • <span class="kbd">L</span> لاگ • <span class="kbd">F</span> تمام‌صفحه • <span class="kbd">Ctrl/⌘ K</span> پنل فرمان</div>
+    </div>
   </section>
 
   <section class="tab" id="tab-users">
@@ -393,6 +459,52 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
     </div>
   </section>
 
+  <section class="tab" id="tab-analytics">
+    <div class="pro-grid">
+      <div class="card span-8">
+        <div class="title"><h2>📈 Telemetry Stream</h2><span id="telemetryMeta" class="meta">—</span></div>
+        <div class="chart-wrap"><canvas id="telemetryChart"></canvas></div>
+        <div class="chart-legend"><span><i class="legend-dot" style="color:var(--accent)"></i>API latency (ms)</span><span><i class="legend-dot" style="color:var(--good)"></i>Events/min</span></div>
+      </div>
+      <div class="card span-4">
+        <div class="title"><h2>🧬 توزیع Event</h2><span class="meta">از زمان اجرا</span></div>
+        <div class="donut-wrap">
+          <div style="position:relative"><div class="donut" id="eventDonut"></div><div class="donut-center"><strong id="donutTotal">0</strong><span>رویداد</span></div></div>
+          <div class="donut-labels">
+            <div class="donut-label"><span>/start</span><b id="donutStart">0</b></div>
+            <div class="donut-label"><span>Callback</span><b id="donutCallback">0</b></div>
+            <div class="donut-label"><span>پیام</span><b id="donutMessage">0</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card span-5">
+        <div class="title"><h2>🛰 Timeline</h2><span class="meta">آخرین بررسی‌ها</span></div>
+        <div class="timeline" id="telemetryTimeline"><div class="empty">داده‌ای ثبت نشده است.</div></div>
+      </div>
+      <div class="card span-7">
+        <div class="title"><h2>🔬 Runtime Snapshot</h2><span class="meta">اطلاعات امن و بدون Secret</span></div>
+        <div class="grid2">
+          <div class="metric"><span>Bot</span><span id="aBot">—</span></div>
+          <div class="metric"><span>Telegram</span><span id="aTelegram">—</span></div>
+          <div class="metric"><span>Processing</span><span id="aProcessing">—</span></div>
+          <div class="metric"><span>Handlers</span><span id="aHandlers">—</span></div>
+          <div class="metric"><span>Uptime</span><span id="aUptime">—</span></div>
+          <div class="metric"><span>Session</span><span id="aSessions">—</span></div>
+          <div class="metric"><span>Users</span><span id="aUsers">—</span></div>
+          <div class="metric"><span>Admin</span><span id="aAdmins">—</span></div>
+        </div>
+      </div>
+      <div class="card span-12">
+        <div class="title"><h2>🧭 راهنمای وضعیت</h2><span class="meta">تفسیر خنثی از Telemetry</span></div>
+        <div class="grid3">
+          <div class="metric"><span>اتصال Telegram</span><span>مسیر اتصال حساب ربات به Telegram</span></div>
+          <div class="metric"><span>Handler</span><span>ثبت شدن Event Handlerهای اصلی</span></div>
+          <div class="metric"><span>Storage</span><span>قابلیت خواندن/نوشتن فایل‌های runtime</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-system">
     <div class="grid">
       <div class="card kpi"><div class="label">Service</div><div id="service" class="value" style="font-size:18px">—</div></div>
@@ -403,6 +515,7 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
     <div class="grid2 section">
       <div class="card">
         <div class="title"><h2>⚙ جزئیات سیستم</h2><span class="meta">بدون نمایش Secretها</span></div>
+        <div class="action-strip" style="margin-bottom:10px"><button class="mini" onclick="copyDiagnostics()">📋 کپی</button><button class="mini" onclick="exportSnapshot()">⇩ JSON</button></div>
         <div id="systemInfo" class="system-code">در حال دریافت...</div>
       </div>
       <div class="card">
@@ -419,7 +532,7 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
 <script>
 
 const $=id=>document.getElementById(id);
-let auto=true,statusTimer=null,logTimer=null,userTimer=null,logLevel="all",lastStatus=null,cachedLogs=[];
+let auto=true,statusTimer=null,logTimer=null,userTimer=null,logLevel="all",lastStatus=null,cachedLogs=[],telemetryHistory=[],lastDiagnostics=null;
 let requestBusy=new Set(), lastSuccessfulCheck=0, tabName=localStorage.getItem("reporter.activeTab")||"overview";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
@@ -443,6 +556,7 @@ function tab(name,save=true){
   if(name==="admins")loadAdmins();
   if(name==="channels")loadChannels();
   if(name==="logs")loadLogs();
+  if(name==="analytics")renderAnalytics();
 }
 function fmtUptime(sec){
   let s=Math.max(0,Number(sec||0));const d=Math.floor(s/86400);s%=86400;
@@ -608,6 +722,8 @@ async function loadStatus(){
     healthBox("hStorage",true,"Volume متصل");
     $("tab-overview").classList.toggle("danger-glow",!online||!connected||totalErrors(b.handler_errors)>0);
     $("tab-overview").classList.toggle("success-glow",online&&connected&&b.handlers_registered===true&&totalErrors(b.handler_errors)===0);
+    recordTelemetry(b,Number(j._latency??(performance.now()-started)));
+    updateAdvancedTelemetry(b);
   }catch(e){
     markFailure(e.message);
     $("telegram").textContent="خطا";$("telegram").className="value bad";
@@ -618,6 +734,7 @@ async function loadStatus(){
 async function loadDiagnostics(){
   try{
     const j=await apiFetch("/api/diagnostics",{timeout:6500,retries:1});
+    lastDiagnostics=j;
     $("diagDeployment").textContent=j.deployment_id?String(j.deployment_id).slice(0,18)+"…":"—";
     $("diagChecked").textContent=nowFa();
     $("diagLastError").textContent=j.last_handler_error||"—";
@@ -706,6 +823,117 @@ async function channelAction(action){
   if(!/^@?[A-Za-z0-9_]{4,64}$/.test(c)){showToast("فرمت username کانال درست نیست",false);return;}
   try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs(false)]);}catch(e){showToast(e.message,false);}
 }
+
+function healthPercent(b){
+  const online=b&&b.status==="online";
+  const checks=[online,!!b.telegram_connected,b.handlers_registered===true,b.processing_enabled!==false,totalErrors(b.handler_errors)===0];
+  return Math.round(checks.filter(Boolean).length/checks.length*100);
+}
+function recordTelemetry(b,latency){
+  const now=Date.now();
+  const total=Number(b?.event_counts?.start||0)+Number(b?.event_counts?.callback||0)+Number(b?.event_counts?.message||0);
+  const prev=telemetryHistory[telemetryHistory.length-1];
+  let rate=0;
+  if(prev && now>prev.t){rate=Math.max(0,(total-prev.total)/((now-prev.t)/60000));}
+  telemetryHistory.push({t:now,latency:Number(latency||0),total,rate,online:b?.status==="online"});
+  if(telemetryHistory.length>60)telemetryHistory=telemetryHistory.slice(-60);
+}
+function updateAdvancedTelemetry(b){
+  const health=healthPercent(b);
+  const recent=telemetryHistory.slice(-8);
+  const avg=recent.length?recent.reduce((a,x)=>a+x.latency,0)/recent.length:0;
+  const latest=telemetryHistory[telemetryHistory.length-1];
+  $("healthPct").textContent=health+"%";
+  $("healthProgress").style.width=health+"%";
+  $("healthState").textContent=health>=100?"پایدار":health>=80?"نیازمند توجه":"بررسی لازم";
+  $("healthState").className="pill "+(health>=100?"good":health>=80?"warn":"bad");
+  $("healthMeta").textContent="۵ شاخص عملیاتی • خطاهای Handler: "+totalErrors(b?.handler_errors);
+  $("apiSpeed").textContent=Math.round(latest?.latency||avg||0)+"ms";
+  $("apiSpeedMeta").textContent=avg?("میانگین ۸ بررسی اخیر: "+Math.round(avg)+"ms"):"هنوز داده کافی نیست";
+  const total=Number(b?.event_counts?.start||0)+Number(b?.event_counts?.callback||0)+Number(b?.event_counts?.message||0);
+  $("eventTotal").textContent=total.toLocaleString("fa-IR");
+  $("eventRate").textContent=Math.round(latest?.rate||0).toLocaleString("fa-IR")+" / دقیقه";
+  const age=b?.last_event_at?Math.max(0,Math.floor((Date.now()-new Date(b.last_event_at).getTime())/1000)):null;
+  $("eventAge").textContent=age===null?"—":(age<60?age+"ث":Math.floor(age/60)+"د");
+  $("eventAgeMeta").textContent=b?.last_event_type?("نوع: "+b.last_event_type+" • کاربر: "+(b.last_event_user_id??"—")):"هنوز Event ثبت نشده";
+  $("aBot").textContent=b?.bot_username?("@"+b.bot_username):"—";
+  $("aTelegram").textContent=b?.telegram_connected?"متصل":"قطع";
+  $("aProcessing").textContent=b?.processing_enabled===false?"متوقف":"فعال";
+  $("aHandlers").textContent=b?.handlers_registered?"فعال":"نافعال";
+  $("aUptime").textContent=fmtUptime(b?.uptime_seconds);
+  $("aSessions").textContent=Number(b?.sessions||0).toLocaleString("fa-IR");
+  $("aUsers").textContent=Number(b?.users||0).toLocaleString("fa-IR");
+  $("aAdmins").textContent=Number(b?.admins||0).toLocaleString("fa-IR");
+  renderAnalytics();
+}
+function renderAnalytics(){
+  if(!$("telemetryChart")||!lastStatus)return;
+  const hist=telemetryHistory.slice(-40);
+  $("telemetryMeta").textContent=hist.length+" نمونه • "+nowFa();
+  drawTelemetry(hist);
+  const b=lastStatus||{};
+  const s=Number(b.event_counts?.start||0),cb=Number(b.event_counts?.callback||0),m=Number(b.event_counts?.message||0),total=s+cb+m;
+  $("donutTotal").textContent=total.toLocaleString("fa-IR");
+  $("donutStart").textContent=s.toLocaleString("fa-IR");
+  $("donutCallback").textContent=cb.toLocaleString("fa-IR");
+  $("donutMessage").textContent=m.toLocaleString("fa-IR");
+  const p1=total?s/total*100:0,p2=total?(s+cb)/total*100:0;
+  $("eventDonut").style.background="conic-gradient(var(--good) 0 "+p1+"%, var(--accent) "+p1+"% "+p2+"%, var(--accent2) "+p2+"% 100%)";
+  const items=telemetryHistory.slice(-10).reverse().map(x=>{
+    const cls=x.online?"good":"bad";
+    const d=new Date(x.t).toLocaleTimeString("fa-IR");
+    return '<div class="timeline-item '+cls+'"><i class="timeline-dot"></i><div><b>'+esc(x.online?"سرویس آنلاین":"سرویس آفلاین")+'</b><span>API '+Math.round(x.latency)+'ms • '+Math.round(x.rate||0)+'/min</span></div><span>'+esc(d)+'</span></div>';
+  }).join("");
+  $("telemetryTimeline").innerHTML=items||'<div class="empty">داده‌ای ثبت نشده است.</div>';
+}
+function drawTelemetry(hist){
+  const canvas=$("telemetryChart"),ctx=canvas?.getContext("2d");if(!ctx)return;
+  const rect=canvas.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
+  const w=Math.max(320,Math.floor(rect.width*d)),h=Math.max(180,Math.floor(rect.height*d));
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+  ctx.clearRect(0,0,w,h);
+  const vals=hist.length?hist:[{latency:0,rate:0}];
+  const lat=vals.map(x=>Number(x.latency||0)),rates=vals.map(x=>Number(x.rate||0));
+  const maxLat=Math.max(50,...lat),maxRate=Math.max(5,...rates);
+  const pad={l:34,r:12,t:16,b:24},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+  ctx.strokeStyle="rgba(148,163,184,.10)";ctx.lineWidth=1;
+  for(let i=0;i<4;i++){const y=pad.t+ph*i/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();}
+  function line(points,max,color){
+    if(!points.length)return;
+    ctx.strokeStyle=color;ctx.lineWidth=2*d;ctx.beginPath();
+    points.forEach((v,i)=>{const x=pad.l+(points.length===1?pw/2:pw*i/(points.length-1));const y=pad.t+ph-(Math.min(max,Math.max(0,v))/max)*ph;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.stroke();
+  }
+  line(lat,maxLat,"rgba(110,168,255,.95)");
+  line(rates,maxRate,"rgba(69,227,154,.88)");
+}
+function downloadText(filename,textValue,mime="application/json"){
+  const blob=new Blob([textValue],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+function exportLogs(){
+  downloadText("reporter-log.txt",(cachedLogs||[]).join("\n"),"text/plain;charset=utf-8");
+  showToast("فایل لاگ آماده شد");
+}
+function exportSnapshot(){
+  const payload={exported_at:new Date().toISOString(),status:lastStatus,diagnostics:lastDiagnostics,telemetry:telemetryHistory.slice(-60)};
+  downloadText("reporter-snapshot.json",JSON.stringify(payload,null,2));
+  showToast("Snapshot وضعیت آماده شد");
+}
+async function copyDiagnostics(){
+  const payload=lastDiagnostics||lastStatus||{};
+  try{await navigator.clipboard.writeText(JSON.stringify(payload,null,2));showToast("Diagnostics کپی شد");}
+  catch{showToast("کپی مستقیم در این مرورگر در دسترس نیست",false);}
+}
+function toggleFullscreen(){
+  const doc=document;
+  if(!doc.fullscreenElement){doc.documentElement.requestFullscreen?.().then(()=>{$("fullscreenBtn")&&($("fullscreenBtn").textContent="⛶ خروج از تمام‌صفحه")}).catch(()=>showToast("حالت تمام‌صفحه توسط مرورگر اجازه داده نشد",false));}
+  else{doc.exitFullscreen?.();$("fullscreenBtn")&&($("fullscreenBtn").textContent="⛶ تمام‌صفحه");}
+}
+document.addEventListener("fullscreenchange",()=>{
+  if($("fullscreenBtn"))$("fullscreenBtn").textContent=document.fullscreenElement?"⛶ خروج از تمام‌صفحه":"⛶ تمام‌صفحه";
+});
+
 async function refreshAll(show=true){
   const started=performance.now();
   await Promise.allSettled([loadStatus(),loadDiagnostics(),loadLogs(false),loadUsers(),loadAdmins(),loadChannels()]);
@@ -732,6 +960,8 @@ document.addEventListener("keydown",e=>{
   if(e.target.matches("input,textarea"))return;
   if(e.key.toLowerCase()==="r"){e.preventDefault();refreshAll();}
   if(e.key.toLowerCase()==="l"){e.preventDefault();tab("logs");}
+  if(e.key.toLowerCase()==="f"){e.preventDefault();toggleFullscreen();}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();showToast("میانبر فرمان فعال است • از تب‌ها و کلیدهای سریع استفاده کنید");}
 });
 (function initCanvas(){
   const c=$("bg"),ctx=c.getContext("2d");if(!ctx)return;
