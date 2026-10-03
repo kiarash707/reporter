@@ -12,5 +12,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY Reporter.py .
+COPY bootstrap.py .
 
-CMD ["python", "Reporter.py"]
+CMD ["python", "bootstrap.py"]
