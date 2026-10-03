@@ -2262,47 +2262,13 @@ async def main():
     # Register handlers before connecting so no update is missed during startup.
     bot = TelegramClient(StringSession(), API_ID, API_HASH, receive_updates=True)
     bot_instance = bot
+
     bot.add_event_handler(
         lambda event: protected_handler("start", start_handler, event),
-        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?
-
-    await bot.start(bot_token=BOT_TOKEN)
-    me = await bot.get_me()
-    if not getattr(me, "bot", False):
-        raise RuntimeError("BOT_TOKEN authenticated as a non-bot Telegram account")
-    BOT_USERNAME = me.username or ""
-    logger.info("Telegram bot identity verified: @%s (id=%s)", me.username or "unknown", me.id)
-
-    BOT_STARTED_AT = datetime.now(pytz.UTC)
-    MONITOR_SERVER = start_monitor_server()
-    logger.info("Bot started; processing_enabled=%s", BOT_PROCESSING_ENABLED)
-
-    # Process any updates that arrived before the event loop became fully ready.
-    try:
-        await bot.catch_up()
-        logger.info("Telegram update catch-up completed")
-    except Exception:
-        logger.exception("Telegram update catch-up failed; continuing with live updates")
-
-    logger.info("SHIKH REPORTER is running...")
-    try:
-        await bot.run_until_disconnected()
-    finally:
-        if MONITOR_SERVER is not None:
-            try:
-                MONITOR_SERVER.shutdown()
-            except Exception:
-                pass
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by process signal")
-    except Exception:
-        logger.exception("FATAL: bot process stopped because of an unhandled exception")
-        raise
-)
+        events.NewMessage(
+            incoming=True,
+            pattern=r'^/start(?:@\w+)?(?:\s+(.+))?$'
+        )
     )
     bot.add_event_handler(
         lambda event: protected_handler("callback", callback_handler, event, callback=True),
@@ -2322,18 +2288,28 @@ if __name__ == "__main__":
     me = await bot.get_me()
     if not getattr(me, "bot", False):
         raise RuntimeError("BOT_TOKEN authenticated as a non-bot Telegram account")
-    logger.info("Telegram bot identity verified: @%s (id=%s)", me.username or "unknown", me.id)
+
+    BOT_USERNAME = me.username or ""
+    logger.info(
+        "Telegram bot identity verified: @%s (id=%s)",
+        me.username or "unknown",
+        me.id
+    )
 
     BOT_STARTED_AT = datetime.now(pytz.UTC)
     MONITOR_SERVER = start_monitor_server()
-    logger.info("Bot started; processing_enabled=%s", BOT_PROCESSING_ENABLED)
+    logger.info(
+        "Bot started; processing_enabled=%s",
+        BOT_PROCESSING_ENABLED
+    )
 
-    # Process any updates that arrived before the event loop became fully ready.
     try:
         await bot.catch_up()
         logger.info("Telegram update catch-up completed")
     except Exception:
-        logger.exception("Telegram update catch-up failed; continuing with live updates")
+        logger.exception(
+            "Telegram update catch-up failed; continuing with live updates"
+        )
 
     logger.info("SHIKH REPORTER is running...")
     try:
@@ -2345,11 +2321,14 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Bot stopped by process signal")
     except Exception:
-        logger.exception("FATAL: bot process stopped because of an unhandled exception")
+        logger.exception(
+            "FATAL: bot process stopped because of an unhandled exception"
+        )
         raise
