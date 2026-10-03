@@ -51,6 +51,51 @@ button:hover{background:#20304d}
 <div id="updated" class="notice">—</div><div id="explain" class="notice">در حال بررسی وضعیت عملیاتی ربات...</div>
 </div>
 
+<div class="section card">
+<div class="section-title"><h2>🎛 کنترل ربات</h2><div class="meta">کنترل مستقیم سرویس ربات</div></div>
+<div class="actions" style="flex-wrap:wrap">
+<button onclick="controlBot('resume')" id="resumeBtn">▶️ فعال‌سازی</button>
+<button onclick="controlBot('pause')" id="pauseBtn">⏸️ توقف پاسخ‌گویی</button>
+<button onclick="controlBot('restart')">🔄 راه‌اندازی مجدد</button>
+</div>
+<div id="controlMsg" class="notice">—</div>
+</div>
+
+<div class="section card">
+<div class="section-title"><h2>👥 کاربران</h2><div id="userMeta" class="meta">—</div></div>
+<div class="actions" style="margin-bottom:10px">
+<input id="userSearch" placeholder="جستجو با آیدی عددی" style="flex:1;min-width:180px;border:1px solid var(--line);background:#0d1522;color:var(--text);padding:10px;border-radius:10px">
+<button onclick="loadUsers()">🔎 جستجو</button>
+</div>
+<div style="overflow:auto">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr><th style="text-align:right;padding:10px;border-bottom:1px solid var(--line)">آیدی</th><th style="text-align:right;padding:10px;border-bottom:1px solid var(--line)">نقش</th><th style="text-align:right;padding:10px;border-bottom:1px solid var(--line)">وضعیت</th><th style="text-align:right;padding:10px;border-bottom:1px solid var(--line)">زبان</th><th style="text-align:right;padding:10px;border-bottom:1px solid var(--line)">عملیات</th></tr></thead>
+<tbody id="usersBody"><tr><td colspan="5" style="padding:14px">در حال دریافت...</td></tr></tbody>
+</table>
+</div>
+</div>
+
+<div class="section card">
+<div class="section-title"><h2>👑 مدیران</h2><div class="meta">مدیریت دسترسی ادمین‌ها</div></div>
+<div class="actions" style="margin-bottom:10px;flex-wrap:wrap">
+<input id="adminId" placeholder="آیدی عددی" inputmode="numeric" style="min-width:160px;border:1px solid var(--line);background:#0d1522;color:var(--text);padding:10px;border-radius:10px">
+<input id="adminDays" placeholder="روز" value="30" inputmode="numeric" style="width:100px;border:1px solid var(--line);background:#0d1522;color:var(--text);padding:10px;border-radius:10px">
+<button onclick="adminAction('add')">➕ افزودن ادمین</button>
+<button onclick="adminAction('remove')">🗑 حذف ادمین</button>
+</div>
+<div id="adminsBox" class="notice">در حال دریافت...</div>
+</div>
+
+<div class="section card">
+<div class="section-title"><h2>📢 کانال‌های اجباری</h2><div class="meta">Force Join</div></div>
+<div class="actions" style="margin-bottom:10px;flex-wrap:wrap">
+<input id="channelName" placeholder="@channel" style="flex:1;min-width:180px;border:1px solid var(--line);background:#0d1522;color:var(--text);padding:10px;border-radius:10px">
+<button onclick="channelAction('add')">➕ افزودن</button>
+<button onclick="channelAction('remove')">🗑 حذف</button>
+</div>
+<div id="channelsBox" class="notice">در حال دریافت...</div>
+</div>
+
 <div class="grid">
 <div class="card"><div class="label">زمان فعالیت</div><div id="uptime" class="value">—</div></div>
 <div class="card"><div class="label">اتصال Telegram</div><div id="telegram" class="value">—</div></div>
@@ -161,7 +206,80 @@ async function loadLogs(){
   }
 }
 
-async function refreshAll(){await Promise.all([loadStatus(),loadLogs()]);}
+
+async function postApi(path,payload){
+  const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),cache:"no-store"});
+  const j=await r.json();
+  if(!r.ok || j.ok===false) throw new Error(j.error||j.message||"خطای ناشناخته");
+  return j;
+}
+async function controlBot(action){
+  $("controlMsg").textContent="در حال اجرای عملیات...";
+  try{
+    const j=await postApi("/api/control",{action});
+    $("controlMsg").textContent=j.message||"عملیات انجام شد";
+    setTimeout(loadStatus,700);
+    if(action==="restart") setTimeout(loadStatus,3500);
+  }catch(e){$("controlMsg").textContent="❌ "+e.message;}
+}
+async function loadUsers(){
+  try{
+    const q=encodeURIComponent(($("userSearch").value||"").trim());
+    const r=await fetch("/api/users?q="+q+"&limit=300",{cache:"no-store"});
+    const j=await r.json();
+    const body=$("usersBody");
+    body.innerHTML="";
+    (j.users||[]).forEach(u=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML="<td style='padding:9px;border-bottom:1px solid var(--line)'>"+u.id+"</td>"+
+        "<td style='padding:9px;border-bottom:1px solid var(--line)'>"+(u.owner?"مالک":u.admin?"ادمین":"کاربر")+"</td>"+
+        "<td style='padding:9px;border-bottom:1px solid var(--line)'>"+(u.blocked?"🚫 بلاک":"✅ فعال")+"</td>"+
+        "<td style='padding:9px;border-bottom:1px solid var(--line)'>"+(u.language==="en"?"English":"فارسی")+"</td>"+
+        "<td style='padding:9px;border-bottom:1px solid var(--line)'><button onclick='toggleBlock("+u.id+","+(!u.blocked)+")'>"+(u.blocked?"✅ آنبلاک":"🚫 بلاک")+"</button> <button onclick='messageUser("+u.id+")'>✉️ پیام</button></td>";
+      body.appendChild(tr);
+    });
+    $("userMeta").textContent="تعداد نمایش: "+(j.users||[]).length+" • کل: "+(j.total??0);
+  }catch(e){$("usersBody").innerHTML="<tr><td colspan='5' style='padding:14px'>❌ "+e.message+"</td></tr>";}
+}
+async function toggleBlock(id,unblock){
+  try{await postApi("/api/users",{action:unblock?"unblock":"block",user_id:id});await loadUsers();$("updated").textContent="آخرین تغییر: "+new Date().toLocaleTimeString("fa-IR");}
+  catch(e){alert(e.message);}
+}
+async function messageUser(id){
+  const msg=prompt("متن پیام برای کاربر "+id+":");
+  if(!msg) return;
+  try{const j=await postApi("/api/users",{action:"message",user_id:id,message:msg});alert(j.message||"ارسال شد");}
+  catch(e){alert("❌ "+e.message);}
+}
+async function loadAdmins(){
+  try{
+    const j=await (await fetch("/api/admins",{cache:"no-store"})).json();
+    $("adminsBox").innerHTML=(j.admins||[]).map(a=>{
+      const exp=a.expires?new Date(a.expires).toLocaleString("fa-IR"):"بدون انقضا";
+      return "🆔 <b>"+a.id+"</b> — "+(a.owner?"👑 مالک":a.active?"🟢 فعال":"🔴 منقضی")+" — "+exp;
+    }).join("<br>")||"ادمینی ثبت نشده است.";
+  }catch(e){$("adminsBox").textContent="❌ "+e.message;}
+}
+async function adminAction(action){
+  const id=$("adminId").value.trim();
+  const days=$("adminDays").value.trim()||"30";
+  if(!/^\d+$/.test(id)){alert("آیدی عددی وارد کنید");return;}
+  try{const j=await postApi("/api/admins",{action,user_id:Number(id),days:Number(days)});$("adminsBox").textContent=j.message||"انجام شد";await loadAdmins();}
+  catch(e){alert("❌ "+e.message);}
+}
+async function loadChannels(){
+  try{
+    const j=await (await fetch("/api/channels",{cache:"no-store"})).json();
+    $("channelsBox").innerHTML=(j.channels||[]).map(x=>"📢 <b>"+x.channel+"</b>").join("<br>")||"کانال اجباری ثبت نشده است.";
+  }catch(e){$("channelsBox").textContent="❌ "+e.message;}
+}
+async function channelAction(action){
+  const c=$("channelName").value.trim();
+  if(!c){alert("یوزرنیم کانال را وارد کنید");return;}
+  try{const j=await postApi("/api/channels",{action,channel:c});$("channelsBox").textContent=j.message||"انجام شد";$("channelName").value="";await loadChannels();}
+  catch(e){alert("❌ "+e.message);}
+}
+async function refreshAll(){await Promise.all([loadStatus(),loadLogs(),loadUsers(),loadAdmins(),loadChannels()]);}
 
 function startTimers(){
   clearInterval(statusTimer); clearInterval(logTimer);
