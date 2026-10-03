@@ -21,10 +21,13 @@ from telethon.tl.types import (
     InputReportReasonOther
 )
 
-API_ID = 27786760
-API_HASH = "572e48bb7059438ed4e04c572e251f98"
-BOT_TOKEN = "8648562521:AAEmFbzgBnHrsRt7IfH0c9ofZ6Hn-SwApac"
-OWNER_IDS = [8437686179]
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+OWNER_IDS = [int(x.strip()) for x in os.getenv("OWNER_IDS", "8437686179").split(",") if x.strip().isdigit()]
+
+if not API_ID or not API_HASH or not BOT_TOKEN:
+    raise RuntimeError("Missing required environment variables: API_ID, API_HASH, BOT_TOKEN")
 
 DATA_FILE = "data.json"
 ADMIN_SESSIONS_DIR = "admin_sessions"
