@@ -83,7 +83,8 @@ DEFAULT_DATA = {
     "today_date": "",
     "week_number": "",
     "bot_status": "on",
-    "user_lang": {}
+    "user_lang": {},
+    "user_meta": {}
 }
 
 def load_data():
@@ -118,6 +119,7 @@ def load_data():
     safe_dict("admin_data")
     safe_dict("admins")
     safe_dict("user_lang")
+    safe_dict("user_meta")
     if not isinstance(data.get("send_today"), int):
         data["send_today"] = 0
     if not isinstance(data.get("send_week"), int):
@@ -197,6 +199,26 @@ def can_telegram_reporter(user_id):
 def get_user_lang(user_id):
     data = load_data()
     return data.get("user_lang", {}).get(str(user_id), None)
+
+def touch_user(user_id):
+    data = load_data()
+    meta = data.setdefault("user_meta", {})
+    key = str(user_id)
+    now = datetime.now(pytz.timezone("Asia/Tehran")).isoformat()
+    item = meta.get(key)
+    if not isinstance(item, dict):
+        meta[key] = {"first_seen": now, "last_seen": now}
+        save_data(data)
+        return
+    last_seen = item.get("last_seen")
+    try:
+        old = datetime.fromisoformat(last_seen) if last_seen else None
+    except Exception:
+        old = None
+    if old is None or (datetime.now(pytz.timezone("Asia/Tehran")) - old).total_seconds() >= 60:
+        item["last_seen"] = now
+        save_data(data)
+
 
 def set_user_lang(user_id, lang):
     data = load_data()
@@ -278,7 +300,9 @@ def dashboard_user_snapshot():
             "admin": is_owner(uid) or active_admin,
             "owner": is_owner(uid),
             "language": data.get("user_lang", {}).get(str(uid), "fa"),
-            "admin_expires": expires.isoformat() if isinstance(expires, datetime) else None
+            "admin_expires": expires.isoformat() if isinstance(expires, datetime) else None,
+            "first_seen": data.get("user_meta", {}).get(str(uid), {}).get("first_seen"),
+            "last_seen": data.get("user_meta", {}).get(str(uid), {}).get("last_seen")
         })
     rows.sort(key=lambda x: int(x["id"]) if str(x["id"]).isdigit() else 0, reverse=True)
     return rows
@@ -632,6 +656,7 @@ def admin_duration_keyboard(lang):
 
 async def start_handler(event):
     user_id = event.sender_id
+    touch_user(user_id)
     if not BOT_PROCESSING_ENABLED:
         await event.reply("⏸️ ربات موقتاً متوقف است. از داشبورد آن را فعال کنید.")
         return
@@ -1167,6 +1192,7 @@ async def telegram_callback(event, data, user_id, lang):
 async def message_handler(event):
     if not BOT_PROCESSING_ENABLED:
         return
+    touch_user(event.sender_id)
     if event.text.startswith('/'):
         return
 
