@@ -17,7 +17,7 @@ with open(os.path.join(os.path.dirname(__file__), "index.html"), "r", encoding="
     INDEX_HTML = f.read()
 
 
-def bot_request(path, timeout=4):
+def bot_request(path, timeout=4, method="GET", payload=None):
     if not MONITOR_TOKEN:
         raise RuntimeError("MONITOR_TOKEN is not configured")
 
@@ -27,8 +27,11 @@ def bot_request(path, timeout=4):
             "X-Monitor-Token": MONITOR_TOKEN,
             "User-Agent": "ReporterDashboard/1.0"
         },
-        method="GET"
+        method=method
     )
+    if payload is not None:
+        request.data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request.add_header("Content-Type", "application/json; charset=utf-8")
     with urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -95,6 +98,32 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
             if parsed.path == "/":
                 self.send_html(INDEX_HTML)
+                return
+
+            if parsed.path in ["/api/control", "/api/users", "/api/admins", "/api/channels"] and self.command == "POST":
+                try:
+                    raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
+                    payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
+                    data = bot_request(parsed.path, timeout=30, method="POST", payload=payload)
+                    self.send_json(200, data)
+                except Exception as exc:
+                    self.send_json(502, {"ok": False, "error": str(exc)[:180]})
+                return
+
+            if parsed.path == "/api/users":
+                params = parse_qs(parsed.query)
+                data = bot_request("/api/users?" + "&".join(
+                    f"{k}={v[0]}" for k, v in params.items()
+                ))
+                self.send_json(200, data)
+                return
+
+            if parsed.path == "/api/admins":
+                self.send_json(200, bot_request("/api/admins"))
+                return
+
+            if parsed.path == "/api/channels":
+                self.send_json(200, bot_request("/api/channels"))
                 return
 
             if parsed.path == "/api/status":
