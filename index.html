@@ -182,6 +182,22 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-event
 @media(max-width:1100px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}}
 @media(max-width:720px){.wrap{padding:12px}.grid,.grid2,.grid3{grid-template-columns:1fr}.control-grid{grid-template-columns:1fr}.hero h2{font-size:24px}.header-actions{width:100%;justify-content:flex-start}.nav-shell{top:6px}.card{padding:14px}.brand h1{font-size:20px}.brandmark{width:46px;height:46px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* v2 polish + resilience */
+:root{--focus:rgba(110,168,255,.34)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.live{white-space:nowrap}
+#latencyPill{color:#b6c8df}
+#stalePill{transition:.25s}
+.stale{border-color:rgba(255,209,102,.28)!important;color:var(--warn)}
+.danger-glow{border-color:rgba(255,109,122,.34)!important;box-shadow:0 0 0 1px rgba(255,109,122,.08),0 14px 40px rgba(255,109,122,.08)}
+.success-glow{border-color:rgba(69,227,154,.30)!important}
+.toolbar{align-items:center}
+.toolbar .spacer{flex:1;min-width:8px}
+.card h2{position:relative;z-index:1}
+button.busy{position:relative;pointer-events:none;padding-inline-start:38px}
+button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;left:14px;top:50%;margin-top:-8px;animation:spin .75s linear infinite}
+.soft-error{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,109,122,.2);background:rgba(255,109,122,.05);color:#ffb4bc;font-size:11px}
 </style>
 </head>
 <body>
@@ -197,6 +213,8 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-event
     </div>
     <div class="header-actions">
       <span class="live" id="livePill"><span class="live-dot"></span><span>در حال بررسی</span></span>
+      <span class="live" id="latencyPill">⚡ API: —</span>
+      <button onclick="toggleAuto()" id="autoBtn">⟳ خودکار: روشن</button>
       <button onclick="refreshAll()">↻ بروزرسانی</button>
       <button onclick="controlBot('restart')" id="restartTop">🔄 Restart</button>
     </div>
@@ -227,7 +245,7 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-event
         <div class="status-row">
           <span class="pill" id="overall"><span class="dot"></span><span>در حال بررسی</span></span>
           <span class="pill" id="eventPill">آخرین Event: —</span>
-          <span class="pill" id="updatedPill">آخرین بررسی: —</span>
+          <span class="pill" id="updatedPill">آخرین بررسی: —</span><span class="pill" id="stalePill">داده تازه</span>
         </div>
       </div>
       <div class="visual">
@@ -285,7 +303,7 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-event
       <div class="card">
         <div class="title"><h2>🩺 تشخیص سیستم</h2><span class="meta">خوانده‌شده از خود سرویس</span></div>
         <div id="diagHealth" class="health-grid"></div>
-        <div class="metric"><span>Deployment</span><span id="diagDeployment">—</span></div>
+        <div class="metric"><span>Deployment</span><span id="diagDeployment">—</span></div><div class="metric"><span>آخرین بروزرسانی</span><span id="diagChecked">—</span></div><div class="metric"><span>آخرین خطای Handler</span><span id="diagLastError">—</span></div>
         <div class="metric"><span>مانیتورینگ</span><span id="diagMonitor">—</span></div>
         <div class="metric"><span>مسیر داده</span><span id="diagDataDir">—</span></div>
       </div>
@@ -367,41 +385,106 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-event
     </div>
   </section>
 
-  <div class="footer">Reporter Operations Center • تمام کنترل‌های مدیریتی پشت احراز هویت داشبورد هستند.</div>
+  <div class="footer">Reporter Operations Center • پنل مدیریتی احراز هویت‌شده • وضعیت‌ها از سرویس زنده خوانده می‌شوند.</div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
+
 const $=id=>document.getElementById(id);
-let auto=true,statusTimer,logTimer,userTimer,logLevel="all",lastStatus=null;
+let auto=true,statusTimer=null,logTimer=null,userTimer=null,logLevel="all",lastStatus=null,cachedLogs=[];
+let requestBusy=new Set(), lastSuccessfulCheck=0, tabName=localStorage.getItem("reporter.activeTab")||"overview";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function nowFa(){return new Date().toLocaleTimeString("fa-IR");}
 function showToast(msg,ok=true){
-  const el=$("toast");el.textContent=(ok?"✅ ":"❌ ")+msg;el.style.display="block";
-  clearTimeout(showToast.t);showToast.t=setTimeout(()=>el.style.display="none",3500)
+  const el=$("toast");el.textContent=(ok?"✅ ":"❌ ")+String(msg||"");el.style.display="block";
+  clearTimeout(showToast.t);showToast.t=setTimeout(()=>el.style.display="none",3600);
 }
-function tab(name){
+function setBusy(id,busy){
+  const el=$(id);if(!el)return;
+  el.classList.toggle("busy",busy);el.disabled=busy;
+  if(busy)requestBusy.add(id);else requestBusy.delete(id);
+}
+function saveTab(name){tabName=name;localStorage.setItem("reporter.activeTab",name);}
+function tab(name,save=true){
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
-  $("tab-"+name).classList.add("active");
+  const el=$("tab-"+name);if(el)el.classList.add("active");
+  if(save)saveTab(name);
+  if(name==="users")loadUsers();
+  if(name==="admins")loadAdmins();
+  if(name==="channels")loadChannels();
+  if(name==="logs")loadLogs();
 }
 function fmtUptime(sec){
   let s=Math.max(0,Number(sec||0));const d=Math.floor(s/86400);s%=86400;
   const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);s%=60;
-  return (d?d+"روز ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")
+  return (d?d+"روز ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
 }
-function fmtDate(v){if(!v)return "—";try{return new Date(v).toLocaleString("fa-IR")}catch{return String(v)}}
+function fmtDate(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("fa-IR");}
 function healthBox(id,ok,text){
-  const el=$(id);el.classList.toggle("ok",ok);el.classList.toggle("bad",!ok);el.querySelector(".state").textContent=text
+  const el=$(id);if(!el)return;
+  el.classList.toggle("ok",!!ok);el.classList.toggle("bad",!ok);
+  const state=el.querySelector(".state");if(state)state.textContent=text;
 }
-function totalErrors(obj){return Object.values(obj||{}).reduce((a,b)=>a+Number(b||0),0)}
+function totalErrors(obj){return Object.values(obj||{}).reduce((a,b)=>a+Number(b||0),0);}
+function setStale(stale){
+  const el=$("stalePill");if(!el)return;
+  el.classList.toggle("stale",stale);
+  el.textContent=stale?"داده قدیمی/قطع":"داده تازه";
+}
+function markSuccess(latency){
+  lastSuccessfulCheck=Date.now();setStale(false);
+  $("latencyPill").textContent="⚡ API: "+Math.max(0,Math.round(latency))+"ms";
+}
+function markFailure(msg){
+  setStale(true);
+  $("latencyPill").textContent="⚡ API: خطا";
+  $("heroTitle").textContent="ارتباط با سرویس ناپایدار است";
+  $("heroDesc").textContent=String(msg||"خطای ارتباط").slice(0,220);
+}
+async function apiFetch(path,{method="GET",body=null,timeout=7000,retries=1}={}){
+  let lastErr=null;
+  for(let attempt=0;attempt<=retries;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeout);
+    const started=performance.now();
+    try{
+      const res=await fetch(path,{
+        method,cache:"no-store",credentials:"same-origin",
+        headers:body?{"Content-Type":"application/json"}:undefined,
+        body:body?JSON.stringify(body):undefined,signal:controller.signal
+      });
+      const raw=await res.text();
+      let data={};try{data=raw?JSON.parse(raw):{}}catch{}
+      if(!res.ok)throw new Error(data.error||data.message||("HTTP "+res.status));
+      if(data&&data.ok===false&&path.startsWith("/api/")&&path!=="/api/status"&&path!=="/api/logs") {
+        throw new Error(data.error||data.message||"عملیات ناموفق بود");
+      }
+      if(path==="/api/status" && data && data.bot && data.ok===false && data.bot.error){
+        // Status endpoint intentionally returns HTTP 200 for bot-offline conditions.
+        data._latency=performance.now()-started;
+        clearTimeout(timer);
+        return data;
+      }
+      data._latency=performance.now()-started;
+      clearTimeout(timer);
+      return data;
+    }catch(e){
+      clearTimeout(timer);lastErr=e;
+      if(attempt<retries)await new Promise(r=>setTimeout(r,300*(attempt+1)));
+    }
+  }
+  throw lastErr||new Error("Request failed");
+}
 function translateLog(line){
   let s=String(line||"").trim();if(!s)return "";
   const map=[
     [/Bot started; processing_enabled=True/i,"ربات راه‌اندازی شد • پاسخ‌گویی فعال"],
     [/Bot started; processing_enabled=False/i,"ربات راه‌اندازی شد • پاسخ‌گویی متوقف"],
     [/Bot started/i,"ربات راه‌اندازی شد"],
-    [/SHIKH REPORTER is running/i,"ربات آماده دریافت پیام است"],
+    [/Telegram update catch-up completed/i,"همگام‌سازی اولیه Telegram کامل شد"],
     [/Telegram event handlers registered/i,"Event Handlerهای Telegram ثبت شدند"],
     [/Incoming \\/start update from user_id=(\d+)/i,"/start دریافت شد • کاربر $1"],
     [/Incoming callback update from user_id=(\d+)/i,"Callback دریافت شد • کاربر $1"],
@@ -419,49 +502,58 @@ function translateLog(line){
     [/Monitoring API started on port (\d+)/i,"API مانیتورینگ روی پورت $1 فعال شد"],
     [/Unhandled exception in (start|callback|message) handler/i,"خطای کنترل‌نشده در Handler: $1"],
     [/Unhandled exception on (start_handler|callback_handler|message_handler)/i,"خطای کنترل‌نشده در $1"],
+    [/FATAL: bot process stopped/i,"خطای بحرانی باعث توقف پردازش ربات شد"],
+    [/ConnectionResetError/i,"اتصال داخلی قطع و دوباره برقرار شد"],
+    [/TimeoutError/i,"مهلت اتصال تمام شد"],
     [/TypeError:/i,"TypeError:"],[/SyntaxError:/i,"SyntaxError:"]
   ];
   for(const [re,rep] of map)s=s.replace(re,rep);
-  return s
+  return s;
 }
 function levelOf(line){
   if(/\bERROR\b|Traceback|Exception|TypeError|SyntaxError|FATAL/i.test(line))return "error";
   if(/\bWARNING\b|WARN/i.test(line))return "warn";
-  return "info"
+  return "info";
 }
 function renderLogs(arr){
   const q=($("logFilter").value||"").trim().toLowerCase();
-  const filtered=(arr||[]).filter(x=>(logLevel==="all"||levelOf(x)===logLevel)&&(!q||x.toLowerCase().includes(q)));
-  $("logs").textContent=filtered.map(translateLog).join("\\n");
+  const filtered=(arr||[]).filter(x=>{
+    const raw=String(x||"");return (logLevel==="all"||levelOf(raw)===logLevel)&&(!q||raw.toLowerCase().includes(q));
+  });
+  $("logs").textContent=filtered.map(translateLog).join("\n")||"لاگی مطابق فیلتر پیدا نشد.";
   $("logs").scrollTop=$("logs").scrollHeight;
-  $("logMeta").textContent=filtered.length+" خط • سطح: "+logLevel.toUpperCase()+" • "+new Date().toLocaleTimeString("fa-IR");
+  $("logMeta").textContent=filtered.length+" خط • سطح: "+logLevel.toUpperCase()+" • "+nowFa();
 }
 function setLogLevel(level){
-  logLevel=level;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.level===level));loadLogs()
+  logLevel=level;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.level===level));loadLogs(false);
 }
-function clearLogFilter(){$("logFilter").value="";setLogLevel("all")}
-let cachedLogs=[];
-async function loadLogs(){
+function clearLogFilter(){$("logFilter").value="";setLogLevel("all");}
+function renderRecentLogs(){const recent=cachedLogs.slice(-10).map(translateLog).join("\n");$("recentLogs").textContent=recent||"لاگی ثبت نشده است.";}
+async function loadLogs(showError=true){
   try{
-    const j=await(await fetch("/api/logs?lines=300",{cache:"no-store"})).json();
-    cachedLogs=j.lines||[];renderLogs(cachedLogs);
-    const recent=cachedLogs.slice(-10).map(translateLog).join("\\n");
-    $("recentLogs").textContent=recent||"لاگی ثبت نشده است.";
-  }catch(e){$("logs").textContent="[dashboard] "+e.message}
+    const j=await apiFetch("/api/logs?lines=300",{timeout:7000,retries:1});
+    cachedLogs=Array.isArray(j.lines)?j.lines:[];
+    renderLogs(cachedLogs);renderRecentLogs();
+  }catch(e){
+    $("logs").textContent="❌ "+e.message;
+    if(showError)showToast("دریافت لاگ‌ها انجام نشد",false);
+  }
 }
 async function loadStatus(){
+  const started=performance.now();
   try{
-    const j=await(await fetch("/api/status",{cache:"no-store"})).json();
-    const b=j.bot;
+    const j=await apiFetch("/api/status",{timeout:6500,retries:2});
+    const b=j.bot||{};
     lastStatus=b;
-    const online=!!(j.ok&&b&&b.status==="online");
-    const connected=!!(b&&b.telegram_connected);
-    const paused=!!(b&&(b.processing_enabled===false||b.bot_status==="off"));
+    const online=!!(j.ok&&b.status==="online");
+    const connected=!!b.telegram_connected;
+    const paused=!!(b.processing_enabled===false||b.bot_status==="off");
+    markSuccess(j._latency??(performance.now()-started));
     $("livePill").innerHTML='<span class="live-dot" style="background:'+(online?"var(--good)":"var(--bad)")+'"></span><span>'+(online?(paused?"سرویس روشن • پاسخ‌گویی متوقف":"سرویس زنده"):"ارتباط با ربات قطع")+'</span>';
     $("overall").className="pill "+(online&&connected&&!paused?"good":online?(paused?"warn":"cyan"):"bad");
-    $("overall").innerHTML='<span class="dot"></span><span>'+ (online?(paused?"روشن / مکث":"عملیاتی"): "آفلاین") +'</span>';
+    $("overall").innerHTML='<span class="dot"></span><span>'+ (online?(paused?"روشن / مکث":"عملیاتی"):"آفلاین") +'</span>';
     $("heroTitle").textContent=online?(connected?(paused?"ربات آنلاین است ولی پاسخ‌گویی متوقف است":"ربات آماده کار است"):"سرویس آنلاین ولی Telegram قطع است"):"داشبورد نتوانست به ربات برسد";
-    $("heroDesc").textContent=online?("Telegram: "+(connected?"متصل":"قطع")+" • پردازش: "+(paused?"متوقف":"فعال")+" • Handlerها: "+(b.handlers_registered?"ثبت‌شده":"ثبت‌نشده")):"خطا در اتصال به API داخلی ربات: "+(b?.error||"unknown");
+    $("heroDesc").textContent=online?("Telegram: "+(connected?"متصل":"قطع")+" • پردازش: "+(paused?"متوقف":"فعال")+" • Handlerها: "+(b.handlers_registered?"ثبت‌شده":"ثبت‌نشده")+" • آخرین بررسی: "+nowFa()):("خطا در اتصال به API داخلی ربات: "+(b.error||"unknown"));
     $("telegram").textContent=connected?"متصل":"قطع";$("telegram").className="value "+(connected?"good":"bad");
     $("telegramMeta").textContent=b.bot_username?("@"+b.bot_username):"هویت ربات در حال بررسی";
     $("uptime").textContent=fmtUptime(b.uptime_seconds);
@@ -472,7 +564,7 @@ async function loadStatus(){
     $("channels").textContent=Number(b.force_channels||0).toLocaleString("fa-IR");
     $("region").textContent=b.region||"—";$("deployMeta").textContent=b.deployment_id?String(b.deployment_id).slice(0,12)+"…":"—";
     $("service").textContent=b.service||"—";$("environment").textContent=b.environment||"—";$("deployment").textContent=b.deployment_id||"—";$("monitorPort").textContent=b.monitor_port??"—";
-    $("updatedPill").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
+    $("updatedPill").textContent="آخرین بررسی: "+nowFa();
     $("eventPill").textContent="آخرین Event: "+(b.last_event_type||"—");
     $("botUsername").textContent=b.bot_username?("@"+b.bot_username):"—";
     $("lastEvent").textContent=(b.last_event_type||"—")+" • "+fmtDate(b.last_event_at);
@@ -487,12 +579,21 @@ async function loadStatus(){
     healthBox("hHandlers",b.handlers_registered===true,b.handlers_registered?"فعال":"نافعال");
     healthBox("hProcessing",!paused,paused?"متوقف":"فعال");
     healthBox("hStorage",true,"Volume متصل");
-  }catch(e){$("heroTitle").textContent="خطای ارتباط با داشبورد";$("heroDesc").textContent=e.message}
+    $("tab-overview").classList.toggle("danger-glow",!online||!connected||totalErrors(b.handler_errors)>0);
+    $("tab-overview").classList.toggle("success-glow",online&&connected&&b.handlers_registered===true&&totalErrors(b.handler_errors)===0);
+  }catch(e){
+    markFailure(e.message);
+    $("telegram").textContent="خطا";$("telegram").className="value bad";
+    $("telegramMeta").textContent="اتصال به سرویس ممکن نیست";
+    $("tab-overview").classList.add("danger-glow");
+  }
 }
 async function loadDiagnostics(){
   try{
-    const j=await(await fetch("/api/diagnostics",{cache:"no-store"})).json();
+    const j=await apiFetch("/api/diagnostics",{timeout:6500,retries:1});
     $("diagDeployment").textContent=j.deployment_id?String(j.deployment_id).slice(0,18)+"…":"—";
+    $("diagChecked").textContent=nowFa();
+    $("diagLastError").textContent=j.last_handler_error||"—";
     $("diagMonitor").textContent=j.telegram_connected?"API + Telegram سالم":"نیازمند بررسی";
     $("diagDataDir").textContent=j.storage?.data_dir||"—";
     const s=j.storage||{};
@@ -502,7 +603,7 @@ async function loadDiagnostics(){
       ["Processing",j.processing_enabled],
       ["data.json",s.data_file_exists&&s.data_file_writable],
       ["sessions/",s.admin_sessions_dir_exists&&s.admin_sessions_writable]
-    ].map(x=>'<div class="health '+(x[1]?"ok":"bad")+'"><span class="name">'+x[0]+'</span><span class="state">'+(x[1]?"سالم":"بررسی لازم")+'</span></div>').join("");
+    ].map(x=>'<div class="health '+(x[1]?"ok":"bad")+'"><span class="name">'+esc(x[0])+'</span><span class="state">'+(x[1]?"سالم":"بررسی لازم")+'</span></div>').join("");
     $("systemInfo").textContent=JSON.stringify(j,null,2);
     $("storageInfo").innerHTML=[
       ["پوشه داده",s.data_dir||"—",true],
@@ -510,92 +611,124 @@ async function loadDiagnostics(){
       ["admin_sessions",s.admin_sessions_dir_exists?"وجود دارد":"وجود ندارد",s.admin_sessions_dir_exists&&s.admin_sessions_writable],
       ["Session count",j.sessions??0,true]
     ].map(x=>'<div class="metric"><span>'+esc(x[0])+'</span><span class="'+(x[2]?"good":"bad")+'">'+esc(x[1])+'</span></div>').join("");
-  }catch(e){$("systemInfo").textContent="Diagnostics unavailable: "+e.message}
+  }catch(e){
+    $("systemInfo").textContent="Diagnostics unavailable: "+e.message;
+    $("diagLastError").textContent=e.message;
+  }
 }
 async function postApi(path,payload){
-  const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),cache:"no-store"});
-  let j={};try{j=await r.json()}catch{}
-  if(!r.ok||j.ok===false)throw new Error(j.error||j.message||("HTTP "+r.status));
-  return j
+  const j=await apiFetch(path,{method:"POST",body:payload,timeout:15000,retries:1});
+  return j;
 }
 async function controlBot(action){
   if(action==="restart"&&!confirm("ربات Restart شود؟ چند ثانیه قطع و دوباره متصل می‌شود."))return;
+  const buttonIds=action==="restart"?["restartTop"]:[];buttonIds.forEach(id=>setBusy(id,true));
   $("controlMsg").textContent="در حال اجرای عملیات...";
   try{
-    const j=await postApi("/api/control",{action});$("controlMsg").textContent=j.message||"انجام شد";showToast(j.message||"انجام شد");
-    setTimeout(()=>{loadStatus();loadDiagnostics()},900);
-    if(action==="restart")setTimeout(()=>refreshAll(false),5000)
-  }catch(e){$("controlMsg").textContent=e.message;showToast(e.message,false)}
+    const j=await postApi("/api/control",{action});
+    $("controlMsg").textContent=j.message||"انجام شد";showToast(j.message||"انجام شد");
+    setTimeout(()=>{loadStatus();loadDiagnostics();},900);
+    if(action==="restart")setTimeout(()=>refreshAll(false),5000);
+  }catch(e){$("controlMsg").textContent=e.message;showToast(e.message,false);}
+  finally{buttonIds.forEach(id=>setBusy(id,false));}
 }
 async function loadUsers(){
+  if(document.visibilityState==="hidden")return;
   try{
     const q=encodeURIComponent(($("userSearch").value||"").trim());
-    const j=await(await fetch("/api/users?q="+q+"&limit=500",{cache:"no-store"})).json();
+    const j=await apiFetch("/api/users?q="+q+"&limit=500",{timeout:9000,retries:1});
     const body=$("usersBody");body.innerHTML="";
     (j.users||[]).forEach(u=>{
       const id=Number(u.id);const role=u.owner?"♛ مالک":u.admin?"🛡 مدیر":"👤 کاربر";const st=u.blocked?"🚫 بلاک":"✅ فعال";
       const tr=document.createElement("tr");
       tr.innerHTML="<td>"+esc(u.id)+"</td><td>"+role+"</td><td>"+st+"</td><td>"+(u.language==="en"?"English":"فارسی")+"</td><td>"+esc(fmtDate(u.first_seen))+"</td><td>"+esc(fmtDate(u.last_seen))+"</td><td><div class='table-actions'><button class='mini' onclick='toggleBlock("+id+","+(!u.blocked)+")'>"+(u.blocked?"آنبلاک":"بلاک")+"</button><button class='mini' onclick='messageUser("+id+")'>پیام</button></div></td>";
-      body.appendChild(tr)
+      body.appendChild(tr);
     });
     if(!(j.users||[]).length)body.innerHTML="<tr><td colspan='7' class='empty'>کاربری پیدا نشد.</td></tr>";
-    $("userMeta").textContent="نمایش "+(j.users||[]).length+" • کل "+(j.total??0)
-  }catch(e){$("usersBody").innerHTML="<tr><td colspan='7' class='empty'>❌ "+esc(e.message)+"</td></tr>"}
+    $("userMeta").textContent="نمایش "+(j.users||[]).length+" • کل "+(j.total??0);
+  }catch(e){$("usersBody").innerHTML="<tr><td colspan='7' class='empty'>❌ "+esc(e.message)+"</td></tr>";}
 }
 async function toggleBlock(id,unblock){
-  try{const j=await postApi("/api/users",{action:unblock?"unblock":"block",user_id:id});showToast(j.message||"انجام شد");await Promise.all([loadUsers(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
+  try{const j=await postApi("/api/users",{action:unblock?"unblock":"block",user_id:id});showToast(j.message||"انجام شد");await Promise.all([loadUsers(),loadStatus(),loadLogs(false)]);}catch(e){showToast(e.message,false);}
 }
 async function messageUser(id){
   const msg=prompt("متن پیام برای کاربر "+id+":");if(!msg)return;
-  try{const j=await postApi("/api/users",{action:"message",user_id:id,message:msg});showToast(j.message||"ارسال شد");await loadLogs()}catch(e){showToast(e.message,false)}
+  try{const j=await postApi("/api/users",{action:"message",user_id:id,message:msg});showToast(j.message||"ارسال شد");await loadLogs(false);}catch(e){showToast(e.message,false);}
 }
 async function loadAdmins(){
   try{
-    const j=await(await fetch("/api/admins",{cache:"no-store"})).json();
-    $("adminsBox").innerHTML=(j.admins||[]).map(a=>"<div class='metric'><span>🆔 "+esc(a.id)+"</span><span class='"+(a.owner||a.active?"good":"bad")+"'>"+(a.owner?"مالک":a.active?"فعال":"منقضی")+" • "+esc(a.expires?fmtDate(a.expires):"بدون انقضا")+"</span></div>").join("")||"<div class='empty'>مدیری ثبت نشده است.</div>"
-  }catch(e){$("adminsBox").textContent="❌ "+e.message}
+    const j=await apiFetch("/api/admins",{timeout:8000,retries:1});
+    $("adminsBox").innerHTML=(j.admins||[]).map(a=>"<div class='metric'><span>🆔 "+esc(a.id)+"</span><span class='"+(a.owner||a.active?"good":"bad")+"'>"+(a.owner?"مالک":a.active?"فعال":"منقضی")+" • "+esc(a.expires?fmtDate(a.expires):"بدون انقضا")+"</span></div>").join("")||"<div class='empty'>مدیری ثبت نشده است.</div>";
+  }catch(e){$("adminsBox").textContent="❌ "+e.message;}
 }
 async function adminAction(action){
   const id=$("adminId").value.trim(),days=$("adminDays").value.trim()||"30";
-  if(!/^\d+$/.test(id)){showToast("آیدی عددی وارد کنید",false);return}
-  try{const j=await postApi("/api/admins",{action,user_id:Number(id),days:Number(days)});showToast(j.message||"انجام شد");await Promise.all([loadAdmins(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
+  if(!/^\d+$/.test(id)){showToast("آیدی عددی وارد کنید",false);return;}
+  const nDays=Number(days);
+  if(!Number.isInteger(nDays)||nDays<1||nDays>3650){showToast("تعداد روز باید بین ۱ تا ۳۶۵۰ باشد",false);return;}
+  try{const j=await postApi("/api/admins",{action,user_id:Number(id),days:nDays});showToast(j.message||"انجام شد");await Promise.all([loadAdmins(),loadStatus(),loadLogs(false)]);}catch(e){showToast(e.message,false);}
 }
 async function loadChannels(){
   try{
-    const j=await(await fetch("/api/channels",{cache:"no-store"})).json();
-    $("channelsBox").innerHTML=(j.channels||[]).map(x=>"<div class='metric'><span>◌</span><span>"+esc(x.channel)+"</span></div>").join("")||"<div class='empty'>کانال اجباری ثبت نشده است.</div>"
-  }catch(e){$("channelsBox").textContent="❌ "+e.message}
+    const j=await apiFetch("/api/channels",{timeout:8000,retries:1});
+    $("channelsBox").innerHTML=(j.channels||[]).map(x=>"<div class='metric'><span>◌</span><span>"+esc(x.channel)+"</span></div>").join("")||"<div class='empty'>کانال اجباری ثبت نشده است.</div>";
+  }catch(e){$("channelsBox").textContent="❌ "+e.message;}
 }
 async function channelAction(action){
-  const c=$("channelName").value.trim();if(!c){showToast("نام کانال را وارد کنید",false);return}
-  try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
+  const c=$("channelName").value.trim();if(!c){showToast("نام کانال را وارد کنید",false);return;}
+  if(!/^@?[A-Za-z0-9_]{4,64}$/.test(c)){showToast("فرمت username کانال درست نیست",false);return;}
+  try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs(false)]);}catch(e){showToast(e.message,false);}
 }
-async function refreshAll(toast=true){
-  await Promise.all([loadStatus(),loadDiagnostics(),loadLogs(),loadUsers(),loadAdmins(),loadChannels()]);
-  if(toast)showToast("اطلاعات کامل بروزرسانی شد")
+async function refreshAll(show=true){
+  const started=performance.now();
+  await Promise.allSettled([loadStatus(),loadDiagnostics(),loadLogs(false),loadUsers(),loadAdmins(),loadChannels()]);
+  if(show)showToast("اطلاعات کامل بروزرسانی شد • "+Math.round(performance.now()-started)+"ms");
+}
+function toggleAuto(){
+  auto=!auto;
+  $("autoBtn").textContent="⟳ خودکار: "+(auto?"روشن":"خاموش");
+  startTimers();
+  showToast(auto?"بروزرسانی خودکار فعال شد":"بروزرسانی خودکار متوقف شد");
 }
 function startTimers(){
-  clearInterval(statusTimer);clearInterval(logTimer);clearInterval(userTimer);
-  if(!auto)return;
-  statusTimer=setInterval(()=>{loadStatus();loadDiagnostics()},5000);
-  logTimer=setInterval(loadLogs,9000);
-  userTimer=setInterval(loadUsers,15000)
+  [statusTimer,logTimer,userTimer].forEach(x=>x&&clearInterval(x));
+  statusTimer=logTimer=userTimer=null;
+  if(!auto||document.visibilityState==="hidden")return;
+  statusTimer=setInterval(()=>{loadStatus();loadDiagnostics();},5000);
+  logTimer=setInterval(()=>{if(document.visibilityState!=="hidden")loadLogs(false);},10000);
+  userTimer=setInterval(()=>{if(tabName==="users"&&document.visibilityState!=="hidden")loadUsers();},20000);
 }
+document.addEventListener("visibilitychange",startTimers);
 $("logFilter").addEventListener("input",()=>renderLogs(cachedLogs));
-$("userSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadUsers()});
-
+$("userSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadUsers();});
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,textarea"))return;
+  if(e.key.toLowerCase()==="r"){e.preventDefault();refreshAll();}
+  if(e.key.toLowerCase()==="l"){e.preventDefault();tab("logs");}
+});
 (function initCanvas(){
-  const c=$("bg"),ctx=c.getContext("2d");let pts=[],w,h;
-  function resize(){w=c.width=innerWidth*devicePixelRatio;h=c.height=innerHeight*devicePixelRatio;pts=Array.from({length:Math.min(65,Math.floor(innerWidth/20))},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.16*devicePixelRatio,vy:(Math.random()-.5)*.16*devicePixelRatio,r:(.5+Math.random()*1.6)*devicePixelRatio}))}
-  function frame(){
-    ctx.clearRect(0,0,w,h);ctx.fillStyle="rgba(120,165,255,.42)";
-    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}
-    requestAnimationFrame(frame)
+  const c=$("bg"),ctx=c.getContext("2d");if(!ctx)return;
+  let pts=[],w=0,h=0,raf=0,reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function resize(){
+    const d=Math.min(2,devicePixelRatio||1);w=c.width=Math.floor(innerWidth*d);h=c.height=Math.floor(innerHeight*d);
+    const count=reduce?0:Math.min(55,Math.floor(innerWidth/24));
+    pts=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.12*d,vy:(Math.random()-.5)*.12*d,r:(.5+Math.random()*1.5)*d}));
   }
-  addEventListener("resize",resize,{passive:true});resize();frame()
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    if(pts.length){
+      ctx.fillStyle="rgba(120,165,255,.38)";
+      for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  addEventListener("resize",resize,{passive:true});resize();if(!reduce)frame();
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){cancelAnimationFrame(raf);}else if(!reduce)frame();});
 })();
+tab(tabName,false);
+refreshAll(false);
+startTimers();
 
-refreshAll(false);startTimers();
 </script>
 </body>
 </html>
