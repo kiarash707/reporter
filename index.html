@@ -396,7 +396,25 @@ body:global(){}
 @media(max-width:1100px){.pro-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.span-7,.span-8{grid-column:span 6}.span-5{grid-column:span 6}.span-4,.span-3{grid-column:span 3}}
 @media(max-width:720px){.pro-grid{grid-template-columns:1fr}.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:span 1}.donut-wrap{justify-content:center;flex-wrap:wrap}}
 
-</style>
+
+/* v5 adaptive performance + phone-first touch UX */
+html{background:#020409}
+body{contain:paint}
+.tab{content-visibility:auto;contain:layout style paint}
+.card{contain:layout style paint}
+button,input{touch-action:manipulation}
+@media (hover:none){.card:hover,.metric-card:hover{transform:none!important;box-shadow:var(--shadow)}.hero{transform:none!important}}
+.perf-lite .scene3d .orb-b,.perf-lite .scene3d .ring-2{display:none}
+.perf-lite .grid-floor{opacity:.38;animation:none}
+.perf-lite .scan-ring{opacity:.16;animation:none}
+.perf-lite .card:before,.perf-lite .card:after{animation-duration:18s}
+.perf-lite .hero:after{animation-duration:18s}
+.perf-lite .hud-map .route{animation:none}
+.perf-lite .target-blip{animation-duration:2.8s}
+.perf-lite .warning-ticker b{animation:none}
+.perf-ultra .scene3d{display:none}
+.perf-ultra .visual-grid{opacity:.35}
+.perf-ultra .card,.perf-ultra .nav-shell,.perf-ultra .toast{backdrop-filter:none}</style>
 </head>
 <body>
 <canvas id="bg"></canvas>
@@ -708,6 +726,17 @@ body:global(){}
 const $=id=>document.getElementById(id);
 let auto=true,statusTimer=null,logTimer=null,userTimer=null,logLevel="all",lastStatus=null,cachedLogs=[],telemetryHistory=[],lastDiagnostics=null;
 let requestBusy=new Set(), lastSuccessfulCheck=0, tabName=localStorage.getItem("reporter.activeTab")||"overview";
+const PERF={
+  cores:Number(navigator.hardwareConcurrency||4),
+  memory:Number(navigator.deviceMemory||4),
+  saveData:!!navigator.connection?.saveData,
+  touch:matchMedia("(hover:none)").matches,
+  reduced:matchMedia("(prefers-reduced-motion: reduce)").matches
+};
+const PERF_LITE=PERF.reduced||PERF.saveData||PERF.cores<=4||PERF.memory<=4;
+const PERF_ULTRA=PERF.saveData||(PERF.cores<=2&&PERF.memory<=2);
+document.documentElement.classList.toggle("perf-lite",PERF_LITE);
+document.documentElement.classList.toggle("perf-ultra",PERF_ULTRA);
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 function nowFa(){return new Date().toLocaleTimeString("fa-IR");}
@@ -1144,9 +1173,12 @@ function startTimers(){
   [statusTimer,logTimer,userTimer].forEach(x=>x&&clearInterval(x));
   statusTimer=logTimer=userTimer=null;
   if(!auto||document.visibilityState==="hidden")return;
-  statusTimer=setInterval(()=>{loadStatus();loadDiagnostics();},5000);
-  logTimer=setInterval(()=>{if(document.visibilityState!=="hidden")loadLogs(false);},10000);
-  userTimer=setInterval(()=>{if(tabName==="users"&&document.visibilityState!=="hidden")loadUsers();},20000);
+  const statusEvery=PERF_ULTRA?11000:(PERF_LITE?8000:5000);
+  const logsEvery=PERF_ULTRA?20000:(PERF_LITE?14000:10000);
+  const usersEvery=PERF_ULTRA?45000:(PERF_LITE?30000:20000);
+  statusTimer=setInterval(()=>{if(document.visibilityState!=="hidden"){loadStatus();loadDiagnostics();}},statusEvery);
+  logTimer=setInterval(()=>{if(document.visibilityState!=="hidden"&&tabName==="logs")loadLogs(false);},logsEvery);
+  userTimer=setInterval(()=>{if(tabName==="users"&&document.visibilityState!=="hidden")loadUsers();},usersEvery);
 }
 document.addEventListener("visibilitychange",startTimers);
 $("logFilter").addEventListener("input",()=>renderLogs(cachedLogs));
@@ -1159,23 +1191,27 @@ document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();showToast("میانبر فرمان فعال است • از تب‌ها و کلیدهای سریع استفاده کنید");}
 });
 (function initCanvas(){
-  const c=$("bg"),ctx=c.getContext("2d");if(!ctx)return;
-  let pts=[],w=0,h=0,raf=0,reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const c=$("bg"),ctx=c.getContext("2d",{alpha:true});if(!ctx)return;
+  let pts=[],w=0,h=0,raf=0,running=false;
+  const reduce=PERF.reduced;
   function resize(){
-    const d=Math.min(2,devicePixelRatio||1);w=c.width=Math.floor(innerWidth*d);h=c.height=Math.floor(innerHeight*d);
-    const count=reduce?0:Math.min(55,Math.floor(innerWidth/24));
-    pts=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.12*d,vy:(Math.random()-.5)*.12*d,r:(.5+Math.random()*1.5)*d}));
+    const d=Math.min(PERF_ULTRA?1:2,devicePixelRatio||1);
+    w=c.width=Math.floor(innerWidth*d);h=c.height=Math.floor(innerHeight*d);
+    const count=reduce?0:(PERF_ULTRA?10:(PERF_LITE?20:Math.min(55,Math.floor(innerWidth/24))));
+    pts=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*(PERF_LITE?.07:.12)*d,vy:(Math.random()-.5)*(PERF_LITE?.07:.12)*d,r:(.5+Math.random()*(PERF_LITE?.8:1.5))*d}));
   }
   function frame(){
+    if(!running)return;
     ctx.clearRect(0,0,w,h);
     if(pts.length){
-      ctx.fillStyle="rgba(120,165,255,.38)";
+      ctx.fillStyle="rgba(120,165,255,.32)";
       for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
     }
     raf=requestAnimationFrame(frame);
   }
-  addEventListener("resize",resize,{passive:true});resize();if(!reduce)frame();
-  document.addEventListener("visibilitychange",()=>{if(document.hidden){cancelAnimationFrame(raf);}else if(!reduce)frame();});
+  function setRunning(on){running=!!on;cancelAnimationFrame(raf);if(running&&!document.hidden&&!reduce)raf=requestAnimationFrame(frame);}
+  addEventListener("resize",resize,{passive:true});resize();setRunning(!document.hidden);
+  document.addEventListener("visibilitychange",()=>setRunning(!document.hidden));
 })();
 tab(tabName,false);
 refreshAll(false);
@@ -1183,39 +1219,35 @@ startTimers();
 
 
 (function initThreatMotion(){
-  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(reduce)return;
+  if(PERF.reduced||PERF_ULTRA)return;
   const blips=[...document.querySelectorAll(".target-blip")];
   let t=0;
   setInterval(()=>{
+    if(document.hidden)return;
     t++;
-    blips.forEach((el,i)=>{
-      const x=8+((t*(i+3)*7)%78), y=14+((t*(i+5)*11)%67);
-      el.style.left=x+"%";el.style.top=y+"%";
-    });
-    const score=$("threatScore");
-    if(score && !lastStatus)score.textContent=(6+Math.random()*3).toFixed(1);
-  },2200);
+    blips.forEach((el,i)=>{const x=8+((t*(i+3)*7)%78),y=14+((t*(i+5)*11)%67);el.style.left=x+"%";el.style.top=y+"%";});
+  },PERF_LITE?4200:2200);
 })();
 
 (function init3D(){
-  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce=PERF.reduced||PERF_ULTRA;
   const root=document.documentElement;
-  if(reduce){$("threeDPill")&&($("threeDPill").textContent="◈ 3D: کم‌حرکت");return;}
-  let raf=0,mx=0,my=0;
+  if(reduce){if($("threeDPill"))$("threeDPill").textContent=PERF.reduced?"◈ 3D: کم‌حرکت":"◈ 3D: سبک";return;}
+  const hoverCards=[...document.querySelectorAll(".card,.hero")];
+  let raf=0,mx=0,my=0,hovered=null;
   addEventListener("pointermove",e=>{
-    mx=(e.clientX/innerWidth-.5)*2; my=(e.clientY/innerHeight-.5)*2;
+    mx=(e.clientX/innerWidth-.5)*2;my=(e.clientY/innerHeight-.5)*2;
+    hovered=e.target.closest?.(".card,.hero")||null;
     if(raf)return;
     raf=requestAnimationFrame(()=>{
-      root.style.setProperty("--mx3d",(mx*5).toFixed(2)+"deg");
-      root.style.setProperty("--my3d",(my*-4).toFixed(2)+"deg");
-      document.querySelectorAll(".card,.hero").forEach((el,i)=>{
-        if(el.matches(":hover"))el.style.transform="translateY(-5px) rotateX("+((my*-1.2)).toFixed(2)+"deg) rotateY("+((mx*1.5)).toFixed(2)+"deg)";
-      });
+      root.style.setProperty("--mx3d",(mx*3.2).toFixed(2)+"deg");
+      root.style.setProperty("--my3d",(my*-2.4).toFixed(2)+"deg");
+      if(hovered&&hoverCards.includes(hovered))hovered.style.transform="translateY(-4px) rotateX("+((my*-0.8)).toFixed(2)+"deg) rotateY("+((mx*1.1)).toFixed(2)+"deg)";
       raf=0;
     });
   },{passive:true});
-  addEventListener("pointerleave",()=>document.querySelectorAll(".card,.hero").forEach(el=>el.style.transform=""),{passive:true});
+  addEventListener("pointerup",()=>{if(hovered)hovered.style.transform=""},{passive:true});
+  addEventListener("blur",()=>{hoverCards.forEach(el=>el.style.transform="")});
 })();
 </script>
 </body>
