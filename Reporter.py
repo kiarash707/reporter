@@ -44,13 +44,17 @@ BOT_SESSION_PATH = os.path.join(DATA_DIR, "bot_session")
 
 os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
 
+_log_file = os.path.join(DATA_DIR, "bot.log")
 logging.basicConfig(
-    filename=os.path.join(DATA_DIR, "bot.log"),
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    encoding='utf-8'
+    handlers=[
+        logging.FileHandler(_log_file, encoding='utf-8'),
+        logging.StreamHandler()
+    ],
+    force=True
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("reporter")
 
 MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "")
 MONITOR_PORT = int(os.getenv("MONITOR_PORT", "8080"))
@@ -2151,4 +2155,10 @@ async def main():
                 pass
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by process signal")
+    except Exception:
+        logger.exception("FATAL: bot process stopped because of an unhandled exception")
+        raise
