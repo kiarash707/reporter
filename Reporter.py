@@ -60,10 +60,6 @@ BOT_SESSION_PATH = os.path.join(DATA_DIR, "bot_session")
 
 os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
 try:
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-    os.makedirs(RESTORE_DIR, exist_ok=True)
-    os.chmod(BACKUP_DIR, 0o700)
-    os.chmod(RESTORE_DIR, 0o700)
     os.chmod(ADMIN_SESSIONS_DIR, 0o700)
 except OSError:
     pass
@@ -112,6 +108,13 @@ BACKUP_MAX_BYTES = int(os.getenv("BACKUP_MAX_BYTES", str(250 * 1024 * 1024)))
 BACKUP_MAX_UNCOMPRESSED = int(os.getenv("BACKUP_MAX_UNCOMPRESSED", str(350 * 1024 * 1024)))
 BACKUP_MAX_FILES = int(os.getenv("BACKUP_MAX_FILES", "5000"))
 BACKUP_RETENTION = max(1, min(10, int(os.getenv("BACKUP_RETENTION", "3"))))
+os.makedirs(BACKUP_DIR, exist_ok=True)
+os.makedirs(RESTORE_DIR, exist_ok=True)
+try:
+    os.chmod(BACKUP_DIR, 0o700)
+    os.chmod(RESTORE_DIR, 0o700)
+except OSError:
+    pass
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -2659,11 +2662,6 @@ class MonitorHandler(BaseHTTPRequestHandler):
                 threading.Thread(target=delayed_exit, daemon=True).start()
                 return
 
-            if content_length < 0 or content_length > 64 * 1024:
-                self._send_json(413, {"ok": False, "error": "request_too_large"})
-                return
-            raw = self.rfile.read(content_length)
-            payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
             if content_length < 0 or content_length > 64 * 1024:
                 self._send_json(413, {"ok": False, "error": "request_too_large"})
                 return
