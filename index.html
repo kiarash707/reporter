@@ -2,147 +2,325 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reporter • مرکز مدیریت</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b12">
+<meta name="color-scheme" content="dark">
+<title>Reporter • مرکز عملیات</title>
 <style>
-:root{color-scheme:dark;--bg:#080d15;--panel:#101827;--panel2:#0d1421;--line:#22324b;--text:#eef5ff;--muted:#8fa3be;--good:#3fe18b;--bad:#ff6473;--warn:#ffc857;--accent:#63a8ff}
+:root{
+  --bg:#05070c;--bg2:#0a0f19;--panel:rgba(12,18,31,.72);--panel2:rgba(17,25,42,.82);
+  --line:rgba(148,163,184,.13);--line2:rgba(99,168,255,.24);
+  --text:#f4f7fb;--muted:#8ea0ba;--accent:#6ea8ff;--accent2:#9a7bff;
+  --good:#45e39a;--warn:#ffd166;--bad:#ff6d7a;--cyan:#55d6ff;
+  --shadow:0 20px 70px rgba(0,0,0,.34);--r:22px;
+}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:radial-gradient(circle at 15% 0%,#18283f 0,#080d15 42%,#060a10 100%);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
-body{padding-bottom:28px}
-button,input{font:inherit}
-button{border:1px solid var(--line);background:#162238;color:var(--text);padding:10px 13px;border-radius:10px;cursor:pointer;transition:.15s}
-button:hover{background:#1e3150;transform:translateY(-1px)}
-button:disabled{opacity:.5;cursor:not-allowed;transform:none}
-input{border:1px solid var(--line);background:#0b1320;color:var(--text);padding:10px 12px;border-radius:10px;outline:none}
-input:focus{border-color:var(--accent)}
-.wrap{max-width:1400px;margin:auto;padding:20px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
-.brand h1{margin:0;font-size:26px}
-.sub{margin-top:6px;color:var(--muted);font-size:13px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.nav{display:flex;gap:8px;overflow:auto;padding:14px 0}
-.nav button.active{border-color:var(--accent);background:#16305a}
-.tab{display:none}.tab.active{display:block}
-.card{background:rgba(16,24,39,.92);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 14px 34px rgba(0,0,0,.2)}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(1200px 700px at 8% -10%,rgba(74,111,183,.26),transparent 60%),
+    radial-gradient(900px 600px at 100% 0%,rgba(116,86,186,.22),transparent 58%),
+    linear-gradient(180deg,#05070c,#07101a 48%,#05070c);
+  overflow-x:hidden;
+}
+body:before,body:after{
+  content:"";position:fixed;inset:auto;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.32;pointer-events:none;
+  animation:drift 18s ease-in-out infinite alternate;
+}
+body:before{width:320px;height:320px;left:-120px;top:22vh;background:#2677ff}
+body:after{width:280px;height:280px;right:-90px;top:60vh;background:#7b45e6;animation-delay:-7s}
+@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(80px,-50px,0) scale(1.14)}}
+@keyframes floatIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(69,227,154,0)}50%{box-shadow:0 0 0 9px rgba(69,227,154,.08)}}
+@keyframes shimmer{from{background-position:0 0}to{background-position:220% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{50%{opacity:.2}}
+@keyframes scan{from{transform:translateY(-120%)}to{transform:translateY(180%)}}
+a{color:inherit}
+button,input,select,textarea{font:inherit}
+button{border:1px solid var(--line);background:linear-gradient(180deg,#152136,#101a2b);color:var(--text);padding:11px 14px;border-radius:14px;cursor:pointer;transition:.18s ease;box-shadow:0 7px 20px rgba(0,0,0,.13)}
+button:hover{transform:translateY(-2px);border-color:rgba(110,168,255,.34);box-shadow:0 10px 26px rgba(0,0,0,.2)}
+button:active{transform:translateY(0)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+input{
+  width:100%;border:1px solid var(--line);background:rgba(4,8,14,.65);color:var(--text);
+  padding:12px 14px;border-radius:14px;outline:none;transition:.18s
+}
+input:focus{border-color:var(--line2);box-shadow:0 0 0 4px rgba(110,168,255,.07)}
+.wrap{max-width:1480px;margin:auto;padding:22px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;animation:floatIn .55s both}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brandmark{
+  width:52px;height:52px;border-radius:17px;display:grid;place-items:center;font-size:25px;
+  background:linear-gradient(135deg,rgba(110,168,255,.22),rgba(154,123,255,.2));
+  border:1px solid rgba(110,168,255,.24);box-shadow:0 0 36px rgba(89,119,255,.12)
+}
+.brand h1{margin:0;font-size:24px;letter-spacing:-.4px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:12px}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.live{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:999px;background:rgba(9,15,26,.76);font-size:12px
+}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 14px var(--good);animation:pulse 2.4s infinite}
+.nav-shell{
+  position:sticky;top:10px;z-index:20;backdrop-filter:blur(18px);
+  background:rgba(5,8,14,.72);border:1px solid var(--line);border-radius:18px;padding:6px;
+  box-shadow:var(--shadow);margin-bottom:18px
+}
+.nav{display:flex;gap:6px;overflow:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav button{border:0;background:transparent;box-shadow:none;padding:11px 14px;white-space:nowrap;color:var(--muted)}
+.nav button:hover{background:rgba(255,255,255,.035);color:var(--text)}
+.nav button.active{background:linear-gradient(135deg,rgba(110,168,255,.19),rgba(154,123,255,.13));color:var(--text);box-shadow:inset 0 0 0 1px rgba(110,168,255,.13)}
+.tab{display:none;animation:floatIn .35s both}.tab.active{display:block}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{
+  position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:18px;backdrop-filter:blur(18px)
+}
+.card:before{
+  content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.025) 35%,transparent 60%);
+  transform:translateX(-120%);animation:shimmer 12s linear infinite;pointer-events:none
+}
+.hero{
+  min-height:220px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px;
+  background:
+    radial-gradient(circle at 80% 20%,rgba(110,168,255,.16),transparent 35%),
+    radial-gradient(circle at 20% 90%,rgba(154,123,255,.14),transparent 35%),
+    var(--panel)
+}
+.hero-copy{display:flex;flex-direction:column;justify-content:center}
+.eyebrow{font-size:11px;color:#9bb4d8;text-transform:uppercase;letter-spacing:1.2px}
+.hero h2{margin:8px 0;font-size:30px;line-height:1.18}
+.hero .desc{color:var(--muted);line-height:1.85;font-size:13px;max-width:650px}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.visual{
+  position:relative;min-height:180px;border-radius:18px;border:1px solid var(--line);
+  background:linear-gradient(160deg,rgba(17,28,48,.74),rgba(8,12,22,.86));overflow:hidden
+}
+.visual:after{
+  content:"";position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(110,168,255,.65),transparent);
+  animation:scan 4.8s linear infinite;opacity:.55
+}
+.orb{position:absolute;border-radius:50%;filter:blur(0);animation:drift 10s ease-in-out infinite alternate}
+.orb.one{width:110px;height:110px;right:18%;top:16%;background:radial-gradient(circle,rgba(110,168,255,.42),transparent 68%)}
+.orb.two{width:130px;height:130px;left:10%;bottom:-12%;background:radial-gradient(circle,rgba(154,123,255,.32),transparent 68%);animation-delay:-4s}
+.visual-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(150,170,200,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(150,170,200,.06) 1px,transparent 1px);background-size:28px 28px}
+.visual-center{position:absolute;inset:0;display:grid;place-items:center}
+.radar{
+  width:118px;height:118px;border-radius:50%;border:1px solid rgba(110,168,255,.28);position:relative;
+  box-shadow:inset 0 0 24px rgba(110,168,255,.08),0 0 35px rgba(110,168,255,.08)
+}
+.radar:before,.radar:after{content:"";position:absolute;inset:16px;border:1px solid rgba(110,168,255,.15);border-radius:50%}
+.radar:after{inset:0;border-left-color:rgba(110,168,255,.58);animation:spin 4.2s linear infinite}
+.radar-dot{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 15px var(--good);top:30%;left:58%;animation:blink 1.8s infinite}
 .section{margin-top:14px}
-.title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.title h2{margin:0;font-size:17px}
-.meta{font-size:12px;color:var(--muted)}
-.label{font-size:12px;color:var(--muted);margin-bottom:8px}
-.value{font-size:25px;font-weight:750}
-.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
-.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#142236;font-size:13px}
-.dot{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 14px currentColor}
-.notice{color:var(--muted);font-size:12px;line-height:1.7}
-.kpi{min-height:105px}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
-table{width:100%;border-collapse:collapse;min-width:720px}
-th,td{text-align:right;padding:10px;border-bottom:1px solid #1a2940;font-size:13px;vertical-align:middle}
-th{color:#b5c7df;background:#0d1522;position:sticky;top:0}
-tr:last-child td{border-bottom:0}
-.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;border:1px solid var(--line);background:#121d2c}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.toolbar input{flex:1;min-width:180px}
-.logbox{height:500px;overflow:auto;background:#060a10;border:1px solid #1a2638;border-radius:12px;padding:14px;direction:ltr;text-align:left;font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
-.toast{position:fixed;left:18px;bottom:18px;z-index:9999;max-width:420px;padding:13px 15px;border-radius:12px;background:#101b2b;border:1px solid var(--line);box-shadow:0 14px 35px rgba(0,0,0,.35);display:none}
-footer{margin-top:14px;text-align:center;color:var(--muted);font-size:11px}
-@media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
-@media(max-width:560px){.wrap{padding:12px}.grid{grid-template-columns:1fr}.brand h1{font-size:21px}.card{padding:14px}}
+.title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.title h2{margin:0;font-size:16px}.meta{font-size:11px;color:var(--muted)}
+.label{font-size:11px;color:var(--muted);margin-bottom:9px}
+.value{font-size:24px;font-weight:800;letter-spacing:-.6px}
+.kpi{min-height:116px}.kpi-accent{border-color:rgba(110,168,255,.16)}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.cyan{color:var(--cyan)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(10,18,31,.74);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 14px currentColor}
+.notice{color:var(--muted);font-size:12px;line-height:1.8}
+.status-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.metric{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);gap:12px}
+.metric:last-child{border-bottom:0}
+.metric span:first-child{color:var(--muted);font-size:12px}.metric span:last-child{font-weight:700;font-size:12px}
+.health-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.health{
+  padding:12px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.02);
+  display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+.health .name{font-size:11px;color:var(--muted)}.health .state{font-size:12px;font-weight:700}
+.health.ok{border-color:rgba(69,227,154,.16)}.health.bad{border-color:rgba(255,109,122,.18)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.toolbar input{flex:1;min-width:210px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{text-align:right;padding:11px;border-bottom:1px solid var(--line);font-size:12px;vertical-align:middle}
+th{color:#b4c3d8;background:rgba(10,17,29,.86);position:sticky;top:0;z-index:1}
+tr:last-child td{border-bottom:0}tbody tr:hover{background:rgba(110,168,255,.025)}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:10px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.table-actions{display:flex;gap:5px;flex-wrap:wrap}
+.mini{padding:7px 9px;border-radius:10px;font-size:11px}
+.logbox{
+  height:520px;overflow:auto;background:#03060a;border:1px solid rgba(148,163,184,.09);border-radius:16px;padding:16px;
+  direction:ltr;text-align:left;font:12px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;
+  box-shadow:inset 0 0 35px rgba(0,0,0,.3)
+}
+.log-line{margin-bottom:4px}.log-time{color:#53657e}.log-info{color:#a7b7cb}.log-good{color:#7be0ae}.log-warn{color:#ffd166}.log-error{color:#ff7d8a}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{padding:7px 10px;border-radius:999px;border:1px solid var(--line);font-size:11px;cursor:pointer;color:var(--muted);background:rgba(255,255,255,.018)}
+.chip.active{color:var(--text);border-color:rgba(110,168,255,.28);background:rgba(110,168,255,.08)}
+.control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.control{
+  min-height:92px;padding:13px;border-radius:17px;border:1px solid var(--line);background:rgba(255,255,255,.018);
+  display:flex;flex-direction:column;justify-content:space-between
+}
+.control strong{font-size:12px}.control small{color:var(--muted);font-size:10px}
+.progress{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:10px}
+.progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:inherit;transition:width .7s ease}
+.system-code{
+  direction:ltr;text-align:left;background:#03060a;border:1px solid var(--line);border-radius:16px;padding:14px;
+  overflow:auto;font:11px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:#b8c5d8
+}
+.empty{text-align:center;padding:26px;color:var(--muted)}
+.loading{position:relative;overflow:hidden;color:transparent!important;background:rgba(255,255,255,.04);border-radius:8px}
+.loading:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);transform:translateX(-100%);animation:shimmer 1.3s infinite}
+.toast{
+  position:fixed;left:18px;bottom:18px;z-index:9999;max-width:460px;padding:13px 15px;border-radius:15px;
+  background:rgba(12,18,31,.94);border:1px solid var(--line2);box-shadow:var(--shadow);display:none;font-size:12px;
+  backdrop-filter:blur(18px);animation:floatIn .25s both
+}
+.footer{text-align:center;color:var(--muted);font-size:10px;margin:16px 0 4px}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none;opacity:.34}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}}
+@media(max-width:720px){.wrap{padding:12px}.grid,.grid2,.grid3{grid-template-columns:1fr}.control-grid{grid-template-columns:1fr}.hero h2{font-size:24px}.header-actions{width:100%;justify-content:flex-start}.nav-shell{top:6px}.card{padding:14px}.brand h1{font-size:20px}.brandmark{width:46px;height:46px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
 <div class="wrap">
-  <div class="top">
+  <header class="topbar">
     <div class="brand">
-      <h1>🛡️ Reporter • مرکز مدیریت</h1>
-      <div class="sub">کنترل، مانیتورینگ و مدیریت عملیاتی ربات از یک پنل مستقل</div>
+      <div class="brandmark">🛡️</div>
+      <div>
+        <h1>Reporter • مرکز عملیات</h1>
+        <p>داشبورد زنده، مانیتورینگ، مدیریت و عیب‌یابی ربات</p>
+      </div>
     </div>
-    <div class="actions">
-      <button onclick="refreshAll()">↻ بروزرسانی کامل</button>
-      <button onclick="toggleAuto()" id="autoBtn">⏸ توقف بروزرسانی خودکار</button>
+    <div class="header-actions">
+      <span class="live" id="livePill"><span class="live-dot"></span><span>در حال بررسی</span></span>
+      <button onclick="refreshAll()">↻ بروزرسانی</button>
+      <button onclick="controlBot('restart')" id="restartTop">🔄 Restart</button>
     </div>
-  </div>
+  </header>
 
-  <div class="nav">
-    <button class="active" data-tab="overview" onclick="tab('overview')">📊 نمای کلی</button>
-    <button data-tab="users" onclick="tab('users')">👥 کاربران</button>
-    <button data-tab="admins" onclick="tab('admins')">👑 مدیران</button>
-    <button data-tab="channels" onclick="tab('channels')">📢 کانال‌ها</button>
-    <button data-tab="logs" onclick="tab('logs')">🧾 لاگ‌ها</button>
-    <button data-tab="system" onclick="tab('system')">⚙️ سیستم</button>
+  <div class="nav-shell">
+    <nav class="nav">
+      <button class="active" data-tab="overview" onclick="tab('overview')">◈ نمای کلی</button>
+      <button data-tab="users" onclick="tab('users')">◉ کاربران</button>
+      <button data-tab="admins" onclick="tab('admins')">♛ مدیران</button>
+      <button data-tab="channels" onclick="tab('channels')">◌ کانال‌ها</button>
+      <button data-tab="logs" onclick="tab('logs')">⌘ لاگ زنده</button>
+      <button data-tab="system" onclick="tab('system')">⚙ سیستم</button>
+    </nav>
   </div>
 
   <section class="tab active" id="tab-overview">
-    <div class="card">
-      <div class="label">وضعیت اصلی</div>
-      <div id="overall" class="pill"><span class="dot"></span><span>در حال بررسی...</span></div>
-      <div id="updated" class="notice">—</div>
-      <div id="explain" class="notice">در حال بررسی وضعیت عملیاتی ربات...</div>
+    <div class="card hero">
+      <div class="hero-copy">
+        <div class="eyebrow">LIVE OPERATIONS CENTER</div>
+        <h2 id="heroTitle">در حال برقراری ارتباط با ربات...</h2>
+        <div class="desc" id="heroDesc">وضعیت اتصال Telegram، پردازش پیام‌ها و سرویس مانیتورینگ از خود ربات خوانده می‌شود.</div>
+        <div class="hero-actions">
+          <button onclick="controlBot('resume')">▶ فعال‌سازی پاسخ‌گویی</button>
+          <button onclick="controlBot('pause')">⏸ توقف پاسخ‌گویی</button>
+          <button onclick="tab('logs')">⌘ مشاهده لاگ‌ها</button>
+        </div>
+        <div class="status-row">
+          <span class="pill" id="overall"><span class="dot"></span><span>در حال بررسی</span></span>
+          <span class="pill" id="eventPill">آخرین Event: —</span>
+          <span class="pill" id="updatedPill">آخرین بررسی: —</span>
+        </div>
+      </div>
+      <div class="visual">
+        <div class="visual-grid"></div><div class="orb one"></div><div class="orb two"></div>
+        <div class="visual-center"><div class="radar"><div class="radar-dot"></div></div></div>
+      </div>
     </div>
 
     <div class="grid section">
-      <div class="card kpi"><div class="label">اتصال Telegram</div><div id="telegram" class="value">—</div></div>
-      <div class="card kpi"><div class="label">زمان فعالیت</div><div id="uptime" class="value">—</div></div>
-      <div class="card kpi"><div class="label">کاربران</div><div id="users" class="value">—</div></div>
-      <div class="card kpi"><div class="label">ادمین فعال / کل</div><div id="admins" class="value">—</div></div>
-      <div class="card kpi"><div class="label">نشست‌های ذخیره‌شده</div><div id="sessions" class="value">—</div></div>
-      <div class="card kpi"><div class="label">کاربران بلاک</div><div id="blocked" class="value">—</div></div>
-      <div class="card kpi"><div class="label">کانال اجباری</div><div id="channels" class="value">—</div></div>
-      <div class="card kpi"><div class="label">منطقه سرور</div><div id="region" class="value" style="font-size:18px">—</div></div>
+      <div class="card kpi kpi-accent"><div class="label">اتصال Telegram</div><div id="telegram" class="value">—</div><div class="notice" id="telegramMeta">—</div></div>
+      <div class="card kpi"><div class="label">زمان فعالیت</div><div id="uptime" class="value">—</div><div class="notice">از آخرین راه‌اندازی</div></div>
+      <div class="card kpi"><div class="label">کاربران</div><div id="users" class="value">—</div><div class="notice">ثبت‌شده در داده‌های ربات</div></div>
+      <div class="card kpi"><div class="label">مدیر فعال / کل</div><div id="admins" class="value">—</div><div class="notice">مالک + ادمین‌ها</div></div>
+      <div class="card kpi"><div class="label">نشست‌های Telegram</div><div id="sessions" class="value">—</div><div class="notice">Sessionهای ذخیره‌شده</div></div>
+      <div class="card kpi"><div class="label">کاربران بلاک</div><div id="blocked" class="value">—</div><div class="notice">کنترل‌شده از پنل</div></div>
+      <div class="card kpi"><div class="label">کانال اجباری</div><div id="channels" class="value">—</div><div class="notice">Force Join</div></div>
+      <div class="card kpi"><div class="label">ناحیه اجرا</div><div id="region" class="value" style="font-size:18px">—</div><div class="notice" id="deployMeta">—</div></div>
+    </div>
+
+    <div class="grid3 section">
+      <div class="card">
+        <div class="title"><h2>🧠 وضعیت Event Handler</h2><span class="meta">تشخیص سریع مشکل</span></div>
+        <div class="health-grid">
+          <div class="health" id="hTelegram"><span class="name">Telegram</span><span class="state">—</span></div>
+          <div class="health" id="hHandlers"><span class="name">Handlers</span><span class="state">—</span></div>
+          <div class="health" id="hProcessing"><span class="name">Processing</span><span class="state">—</span></div>
+          <div class="health" id="hStorage"><span class="name">Storage</span><span class="state">—</span></div>
+        </div>
+        <div class="metric"><span>Bot Username</span><span id="botUsername">—</span></div>
+        <div class="metric"><span>آخرین Event</span><span id="lastEvent">—</span></div>
+        <div class="metric"><span>خطاهای Handler</span><span id="handlerErrors">—</span></div>
+      </div>
+
+      <div class="card">
+        <div class="title"><h2>📡 فعالیت زنده</h2><span class="meta">شمارنده از زمان راه‌اندازی</span></div>
+        <div class="metric"><span>ورودی /start</span><span class="good" id="evStart">0</span></div>
+        <div class="metric"><span>Callback</span><span class="cyan" id="evCallback">0</span></div>
+        <div class="metric"><span>پیام خصوصی</span><span class="accent" id="evMessage">0</span></div>
+        <div class="metric"><span>آخرین کاربر دریافت‌شده</span><span id="lastUser">—</span></div>
+        <div class="progress"><span id="activityProgress"></span></div>
+      </div>
+
+      <div class="card">
+        <div class="title"><h2>🎛 مرکز کنترل</h2><span class="meta">عملیات فوری</span></div>
+        <div class="control-grid">
+          <div class="control"><div><strong>پاسخ‌گویی</strong><br><small>فعال/متوقف کردن</small></div><button class="mini" onclick="controlBot('resume')">فعال</button></div>
+          <div class="control"><div><strong>بازیابی</strong><br><small>Restart سرویس</small></div><button class="mini" onclick="controlBot('restart')">Restart</button></div>
+          <div class="control"><div><strong>لاگ</strong><br><small>آخرین رخدادها</small></div><button class="mini" onclick="tab('logs')">مشاهده</button></div>
+        </div>
+        <div id="controlMsg" class="notice" style="margin-top:10px">—</div>
+      </div>
     </div>
 
     <div class="grid2 section">
       <div class="card">
-        <div class="title"><h2>🎛 کنترل ربات</h2><span class="meta">کنترل پاسخ‌گویی داخل خود ربات</span></div>
-        <div class="actions">
-          <button onclick="controlBot('resume')">▶️ فعال‌سازی</button>
-          <button onclick="controlBot('pause')">⏸️ توقف پاسخ‌گویی</button>
-          <button onclick="controlBot('restart')">🔄 راه‌اندازی مجدد</button>
-        </div>
-        <div id="controlMsg" class="notice">—</div>
+        <div class="title"><h2>🩺 تشخیص سیستم</h2><span class="meta">خوانده‌شده از خود سرویس</span></div>
+        <div id="diagHealth" class="health-grid"></div>
+        <div class="metric"><span>Deployment</span><span id="diagDeployment">—</span></div>
+        <div class="metric"><span>مانیتورینگ</span><span id="diagMonitor">—</span></div>
+        <div class="metric"><span>مسیر داده</span><span id="diagDataDir">—</span></div>
       </div>
       <div class="card">
-        <div class="title"><h2>🧠 وضعیت عملیاتی</h2><span class="meta">اطلاعات خوانده‌شده از خود ربات</span></div>
-        <div class="notice" id="runtimeInfo">—</div>
+        <div class="title"><h2>📜 آخرین رخدادهای لاگ</h2><button class="mini" onclick="tab('logs')">همه لاگ‌ها</button></div>
+        <div id="recentLogs" class="system-code" style="max-height:245px"></div>
       </div>
     </div>
   </section>
 
   <section class="tab" id="tab-users">
     <div class="card">
-      <div class="title"><h2>👥 مدیریت کاربران</h2><span id="userMeta" class="meta">—</span></div>
+      <div class="title"><h2>◉ مدیریت کاربران</h2><span id="userMeta" class="meta">—</span></div>
       <div class="toolbar">
         <input id="userSearch" placeholder="جستجو با آیدی عددی">
-        <button onclick="loadUsers()">🔎 جستجو</button>
-        <button onclick="document.getElementById('userSearch').value='';loadUsers()">✕ نمایش همه</button>
+        <button onclick="loadUsers()">⌕ جستجو</button>
+        <button onclick="document.getElementById('userSearch').value='';loadUsers()">نمایش همه</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>آیدی</th><th>نقش</th><th>وضعیت</th><th>زبان</th><th>شروع فعالیت</th><th>آخرین فعالیت</th><th>عملیات</th></tr></thead>
-          <tbody id="usersBody"><tr><td colspan="7">در حال دریافت...</td></tr></tbody>
-        </table>
-      </div>
+      <div class="table-wrap"><table><thead><tr><th>آیدی</th><th>نقش</th><th>وضعیت</th><th>زبان</th><th>شروع</th><th>آخرین فعالیت</th><th>عملیات</th></tr></thead><tbody id="usersBody"><tr><td colspan="7" class="empty">در حال دریافت...</td></tr></tbody></table></div>
     </div>
   </section>
 
   <section class="tab" id="tab-admins">
     <div class="grid2">
       <div class="card">
-        <div class="title"><h2>➕ افزودن / تمدید ادمین</h2><span class="meta">با آیدی عددی</span></div>
-        <div class="toolbar">
-          <input id="adminId" placeholder="آیدی عددی" inputmode="numeric">
-          <input id="adminDays" placeholder="روز اعتبار" value="30" inputmode="numeric">
+        <div class="title"><h2>♛ افزودن / حذف مدیر</h2><span class="meta">مدیریت دسترسی</span></div>
+        <div class="toolbar"><input id="adminId" placeholder="آیدی عددی" inputmode="numeric"><input id="adminDays" placeholder="روز اعتبار" value="30" inputmode="numeric"></div>
+        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="adminAction('add')">➕ ثبت / تمدید</button>
+          <button onclick="adminAction('remove')">🗑 حذف</button>
         </div>
-        <div class="actions">
-          <button onclick="adminAction('add')">➕ ثبت ادمین</button>
-          <button onclick="adminAction('remove')">🗑 حذف ادمین</button>
-        </div>
-        <div class="notice">مالک قابل حذف نیست.</div>
+        <div class="notice" style="margin-top:10px">مالک اصلی قابل حذف نیست.</div>
       </div>
       <div class="card">
-        <div class="title"><h2>👑 فهرست مدیران</h2><span class="meta">وضعیت و تاریخ انقضا</span></div>
+        <div class="title"><h2>فهرست مدیران</h2><span class="meta">وضعیت لحظه‌ای</span></div>
         <div id="adminsBox" class="notice">در حال دریافت...</div>
       </div>
     </div>
@@ -150,24 +328,23 @@ footer{margin-top:14px;text-align:center;color:var(--muted);font-size:11px}
 
   <section class="tab" id="tab-channels">
     <div class="card">
-      <div class="title"><h2>📢 مدیریت کانال‌های اجباری</h2><span class="meta">Force Join</span></div>
-      <div class="toolbar">
-        <input id="channelName" placeholder="@channel یا username">
-        <button onclick="channelAction('add')">➕ افزودن</button>
-        <button onclick="channelAction('remove')">🗑 حذف</button>
-      </div>
+      <div class="title"><h2>◌ کانال‌های اجباری</h2><span class="meta">Force Join</span></div>
+      <div class="toolbar"><input id="channelName" placeholder="@channel یا username"><button onclick="channelAction('add')">➕ افزودن</button><button onclick="channelAction('remove')">🗑 حذف</button></div>
       <div id="channelsBox" class="notice">در حال دریافت...</div>
     </div>
   </section>
 
   <section class="tab" id="tab-logs">
     <div class="card">
-      <div class="title"><h2>🧾 لاگ زنده و توضیح عملکرد</h2><span id="logMeta" class="meta">—</span></div>
-      <div class="toolbar">
-        <input id="logFilter" placeholder="فیلتر متن لاگ">
-        <button onclick="loadLogs()">↻ تازه‌سازی لاگ</button>
+      <div class="title"><h2>⌘ کنسول لاگ زنده</h2><span id="logMeta" class="meta">—</span></div>
+      <div class="toolbar"><input id="logFilter" placeholder="جستجوی متن لاگ"><button onclick="loadLogs()">↻ تازه‌سازی</button><button onclick="clearLogFilter()">✕ پاک‌کردن فیلتر</button></div>
+      <div class="chips" id="logChips">
+        <div class="chip active" data-level="all" onclick="setLogLevel('all')">همه</div>
+        <div class="chip" data-level="info" onclick="setLogLevel('info')">INFO</div>
+        <div class="chip" data-level="warn" onclick="setLogLevel('warn')">WARN</div>
+        <div class="chip" data-level="error" onclick="setLogLevel('error')">ERROR</div>
       </div>
-      <div id="logs" class="logbox">در حال دریافت لاگ...</div>
+      <div id="logs" class="logbox" style="margin-top:10px">در حال دریافت لاگ...</div>
     </div>
   </section>
 
@@ -178,26 +355,30 @@ footer{margin-top:14px;text-align:center;color:var(--muted);font-size:11px}
       <div class="card kpi"><div class="label">Deployment ID</div><div id="deployment" class="value" style="font-size:12px;word-break:break-all">—</div></div>
       <div class="card kpi"><div class="label">Monitor Port</div><div id="monitorPort" class="value">—</div></div>
     </div>
-    <div class="card section">
-      <div class="title"><h2>ℹ️ توضیح</h2></div>
-      <div class="notice">این پنل از API خصوصی ربات داده می‌گیرد. توقف پاسخ‌گویی با «توقف پاسخ‌گویی» انجام می‌شود؛ «راه‌اندازی مجدد» کانتینر ربات را وادار به Restart می‌کند. اطلاعات ورود و Tokenهای داخلی در رابط نمایش داده نمی‌شوند.</div>
+    <div class="grid2 section">
+      <div class="card">
+        <div class="title"><h2>⚙ جزئیات سیستم</h2><span class="meta">بدون نمایش Secretها</span></div>
+        <div id="systemInfo" class="system-code">در حال دریافت...</div>
+      </div>
+      <div class="card">
+        <div class="title"><h2>🔐 وضعیت ذخیره‌سازی</h2><span class="meta">Volume / data.json / sessions</span></div>
+        <div id="storageInfo"></div>
+      </div>
     </div>
   </section>
 
-  <footer>Reporter Dashboard • کنترل‌های مدیریتی فقط پشت ورود داشبورد در دسترس هستند.</footer>
+  <div class="footer">Reporter Operations Center • تمام کنترل‌های مدیریتی پشت احراز هویت داشبورد هستند.</div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
-let auto=true,statusTimer,logTimer,userTimer;
 const $=id=>document.getElementById(id);
+let auto=true,statusTimer,logTimer,userTimer,logLevel="all",lastStatus=null;
 
-function esc(v){
-  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 function showToast(msg,ok=true){
-  const el=$("toast"); el.textContent=(ok?"✅ ":"❌ ")+msg; el.style.display="block";
-  clearTimeout(showToast.t); showToast.t=setTimeout(()=>el.style.display="none",3200);
+  const el=$("toast");el.textContent=(ok?"✅ ":"❌ ")+msg;el.style.display="block";
+  clearTimeout(showToast.t);showToast.t=setTimeout(()=>el.style.display="none",3500)
 }
 function tab(name){
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
@@ -205,173 +386,216 @@ function tab(name){
   $("tab-"+name).classList.add("active");
 }
 function fmtUptime(sec){
-  sec=Math.max(0,Number(sec||0));
-  const d=Math.floor(sec/86400); sec%=86400;
-  const h=Math.floor(sec/3600); sec%=3600;
-  const m=Math.floor(sec/60); const s=sec%60;
-  return (d?d+" روز ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  let s=Math.max(0,Number(sec||0));const d=Math.floor(s/86400);s%=86400;
+  const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);s%=60;
+  return (d?d+"روز ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")
 }
-function fmtDate(v){
-  if(!v)return "—";
-  try{return new Date(v).toLocaleString("fa-IR");}catch{return v;}
+function fmtDate(v){if(!v)return "—";try{return new Date(v).toLocaleString("fa-IR")}catch{return String(v)}}
+function healthBox(id,ok,text){
+  const el=$(id);el.classList.toggle("ok",ok);el.classList.toggle("bad",!ok);el.querySelector(".state").textContent=text
 }
+function totalErrors(obj){return Object.values(obj||{}).reduce((a,b)=>a+Number(b||0),0)}
 function translateLog(line){
-  let s=String(line||"").trim(); if(!s)return "";
-  const replacements=[
-    [/Bot started/i,"ربات با موفقیت راه‌اندازی شد"],
+  let s=String(line||"").trim();if(!s)return "";
+  const map=[
+    [/Bot started; processing_enabled=True/i,"ربات راه‌اندازی شد • پاسخ‌گویی فعال"],
+    [/Bot started; processing_enabled=False/i,"ربات راه‌اندازی شد • پاسخ‌گویی متوقف"],
+    [/Bot started/i,"ربات راه‌اندازی شد"],
     [/SHIKH REPORTER is running/i,"ربات آماده دریافت پیام است"],
-    [/Bot processing enabled by dashboard control/i,"پاسخ‌گویی ربات از داشبورد فعال شد"],
-    [/Bot processing paused by dashboard control/i,"پاسخ‌گویی ربات از داشبورد متوقف شد"],
-    [/Restart requested from dashboard/i,"درخواست راه‌اندازی مجدد از داشبورد ثبت شد"],
+    [/Telegram event handlers registered/i,"Event Handlerهای Telegram ثبت شدند"],
+    [/Incoming \\/start update from user_id=(\d+)/i,"/start دریافت شد • کاربر $1"],
+    [/Incoming callback update from user_id=(\d+)/i,"Callback دریافت شد • کاربر $1"],
+    [/Incoming private message update from user_id=(\d+)/i,"پیام خصوصی دریافت شد • کاربر $1"],
+    [/Bot processing enabled by dashboard control/i,"پاسخ‌گویی از داشبورد فعال شد"],
+    [/Bot processing paused by dashboard control/i,"پاسخ‌گویی از داشبورد متوقف شد"],
+    [/Restart requested from dashboard/i,"Restart از داشبورد درخواست شد"],
     [/User (\d+) blocked from dashboard/i,"کاربر $1 از داشبورد بلاک شد"],
     [/User (\d+) unblocked from dashboard/i,"کاربر $1 از داشبورد آنبلاک شد"],
-    [/Dashboard sent a private message to user (\d+)/i,"پیام خصوصی از داشبورد برای کاربر $1 ارسال شد"],
-    [/Admin (\d+) added from dashboard for (\d+) days/i,"ادمین $1 برای $2 روز از داشبورد ثبت شد"],
-    [/Admin (\d+) removed from dashboard/i,"ادمین $1 از داشبورد حذف شد"],
-    [/Force channel (.+) added from dashboard/i,"کانال اجباری $1 از داشبورد اضافه شد"],
-    [/Force channel (.+) removed from dashboard/i,"کانال اجباری $1 از داشبورد حذف شد"],
+    [/Dashboard sent a private message to user (\d+)/i,"پیام از داشبورد برای کاربر $1 ارسال شد"],
+    [/Admin (\d+) added from dashboard for (\d+) days/i,"ادمین $1 برای $2 روز ثبت شد"],
+    [/Admin (\d+) removed from dashboard/i,"ادمین $1 حذف شد"],
+    [/Force channel (.+) added from dashboard/i,"کانال اجباری $1 اضافه شد"],
+    [/Force channel (.+) removed from dashboard/i,"کانال اجباری $1 حذف شد"],
     [/Monitoring API started on port (\d+)/i,"API مانیتورینگ روی پورت $1 فعال شد"],
-    [/Monitoring API could not start/i,"API مانیتورینگ بالا نیامد؛ ربات ادامه کار داد"],
-    [/MONITOR_TOKEN is not configured/i,"توکن مانیتورینگ تنظیم نشده است"],
-    [/Monitor HTTP error/i,"خطا در API مانیتورینگ"],
-    [/Starting report operation/i,"شروع عملیات گزارش"],
-    [/Report Operation Complete/i,"عملیات گزارش تمام شد"]
+    [/Unhandled exception in (start|callback|message) handler/i,"خطای کنترل‌نشده در Handler: $1"],
+    [/Unhandled exception on (start_handler|callback_handler|message_handler)/i,"خطای کنترل‌نشده در $1"],
+    [/TypeError:/i,"TypeError:"],[/SyntaxError:/i,"SyntaxError:"]
   ];
-  for(const [re,rep] of replacements) s=s.replace(re,rep);
-  s=s.replace(/DEBUG/g,"اشکال‌زدایی").replace(/INFO/g,"اطلاعات").replace(/WARNING/g,"هشدار").replace(/ERROR/g,"خطا").replace(/CRITICAL/g,"بحرانی");
-  return s;
+  for(const [re,rep] of map)s=s.replace(re,rep);
+  return s
 }
-function explainStatus(b){
-  if(!b)return "اطلاعاتی از ربات دریافت نشد.";
-  if(b.status!=="online")return "سرویس ربات آنلاین نیست یا API مانیتورینگ پاسخ نمی‌دهد.";
-  if(b.processing_enabled===false||b.bot_status==="off")return "سرویس روشن است، اما پاسخ‌گویی پیام‌ها در حالت مکث قرار دارد.";
-  if(!b.telegram_connected)return "پردازش فعال است، اما اتصال Telegram برقرار نیست.";
-  return "ربات عملیاتی است؛ اتصال Telegram برقرار است و API داخلی بدون خطا پاسخ داده است.";
+function levelOf(line){
+  if(/\bERROR\b|Traceback|Exception|TypeError|SyntaxError|FATAL/i.test(line))return "error";
+  if(/\bWARNING\b|WARN/i.test(line))return "warn";
+  return "info"
+}
+function renderLogs(arr){
+  const q=($("logFilter").value||"").trim().toLowerCase();
+  const filtered=(arr||[]).filter(x=>(logLevel==="all"||levelOf(x)===logLevel)&&(!q||x.toLowerCase().includes(q)));
+  $("logs").textContent=filtered.map(translateLog).join("\\n");
+  $("logs").scrollTop=$("logs").scrollHeight;
+  $("logMeta").textContent=filtered.length+" خط • سطح: "+logLevel.toUpperCase()+" • "+new Date().toLocaleTimeString("fa-IR");
+}
+function setLogLevel(level){
+  logLevel=level;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.level===level));loadLogs()
+}
+function clearLogFilter(){$("logFilter").value="";setLogLevel("all")}
+let cachedLogs=[];
+async function loadLogs(){
+  try{
+    const j=await(await fetch("/api/logs?lines=300",{cache:"no-store"})).json();
+    cachedLogs=j.lines||[];renderLogs(cachedLogs);
+    const recent=cachedLogs.slice(-10).map(translateLog).join("\\n");
+    $("recentLogs").textContent=recent||"لاگی ثبت نشده است.";
+  }catch(e){$("logs").textContent="[dashboard] "+e.message}
 }
 async function loadStatus(){
   try{
     const j=await(await fetch("/api/status",{cache:"no-store"})).json();
-    if(j.ok&&j.bot){
-      const b=j.bot,online=b.status==="online",paused=b.processing_enabled===false||b.bot_status==="off";
-      $("overall").className="pill "+(online?"good":"bad");
-      $("overall").innerHTML='<span class="dot"></span><span>'+ (online?(paused?"ربات روشن ولی متوقف":"ربات آنلاین"):"ربات آفلاین") +'</span>';
-      $("telegram").textContent=b.telegram_connected?"متصل":"قطع";
-      $("telegram").className="value "+(b.telegram_connected?"good":"bad");
-      $("uptime").textContent=fmtUptime(b.uptime_seconds);
-      $("users").textContent=(b.users??0).toLocaleString("fa-IR");
-      $("admins").textContent=((b.active_admins??0)+" / "+(b.admins??0));
-      $("sessions").textContent=(b.sessions??0).toLocaleString("fa-IR");
-      $("blocked").textContent=(b.blocked_users??0).toLocaleString("fa-IR");
-      $("channels").textContent=(b.force_channels??0).toLocaleString("fa-IR");
-      $("region").textContent=b.region||"—";
-      $("service").textContent=b.service||"—";
-      $("environment").textContent=b.environment||"—";
-      $("deployment").textContent=b.deployment_id||"—";
-      $("monitorPort").textContent=b.monitor_port??"—";
-      $("updated").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
-      $("explain").textContent=explainStatus(b);
-      $("runtimeInfo").textContent="وضعیت سرویس: "+(online?"آنلاین":"آفلاین")+" • پاسخ‌گویی: "+(paused?"متوقف":"فعال")+" • Telegram: "+(b.telegram_connected?"متصل":"قطع")+" • کاربران بلاک: "+Number(b.blocked_users||0).toLocaleString("fa-IR");
-    }else{
-      $("overall").className="pill bad"; $("overall").innerHTML='<span class="dot"></span><span>ارتباط با ربات برقرار نیست</span>';
-      $("explain").textContent="داشبورد در دسترس است ولی API خصوصی ربات پاسخ نمی‌دهد.";
-    }
-  }catch(e){$("overall").className="pill bad";$("overall").innerHTML='<span class="dot"></span><span>خطای داشبورد</span>';$("explain").textContent=e.message;}
+    const b=j.bot;
+    lastStatus=b;
+    const online=!!(j.ok&&b&&b.status==="online");
+    const connected=!!(b&&b.telegram_connected);
+    const paused=!!(b&&(b.processing_enabled===false||b.bot_status==="off"));
+    $("livePill").innerHTML='<span class="live-dot" style="background:'+(online?"var(--good)":"var(--bad)")+'"></span><span>'+(online?(paused?"سرویس روشن • پاسخ‌گویی متوقف":"سرویس زنده"):"ارتباط با ربات قطع")+'</span>';
+    $("overall").className="pill "+(online&&connected&&!paused?"good":online?(paused?"warn":"cyan"):"bad");
+    $("overall").innerHTML='<span class="dot"></span><span>'+ (online?(paused?"روشن / مکث":"عملیاتی"): "آفلاین") +'</span>';
+    $("heroTitle").textContent=online?(connected?(paused?"ربات آنلاین است ولی پاسخ‌گویی متوقف است":"ربات آماده کار است"):"سرویس آنلاین ولی Telegram قطع است"):"داشبورد نتوانست به ربات برسد";
+    $("heroDesc").textContent=online?("Telegram: "+(connected?"متصل":"قطع")+" • پردازش: "+(paused?"متوقف":"فعال")+" • Handlerها: "+(b.handlers_registered?"ثبت‌شده":"ثبت‌نشده")):"خطا در اتصال به API داخلی ربات: "+(b?.error||"unknown");
+    $("telegram").textContent=connected?"متصل":"قطع";$("telegram").className="value "+(connected?"good":"bad");
+    $("telegramMeta").textContent=b.bot_username?("@"+b.bot_username):"هویت ربات در حال بررسی";
+    $("uptime").textContent=fmtUptime(b.uptime_seconds);
+    $("users").textContent=Number(b.users||0).toLocaleString("fa-IR");
+    $("admins").textContent=(Number(b.active_admins||0)+" / "+Number(b.admins||0));
+    $("sessions").textContent=Number(b.sessions||0).toLocaleString("fa-IR");
+    $("blocked").textContent=Number(b.blocked_users||0).toLocaleString("fa-IR");
+    $("channels").textContent=Number(b.force_channels||0).toLocaleString("fa-IR");
+    $("region").textContent=b.region||"—";$("deployMeta").textContent=b.deployment_id?String(b.deployment_id).slice(0,12)+"…":"—";
+    $("service").textContent=b.service||"—";$("environment").textContent=b.environment||"—";$("deployment").textContent=b.deployment_id||"—";$("monitorPort").textContent=b.monitor_port??"—";
+    $("updatedPill").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
+    $("eventPill").textContent="آخرین Event: "+(b.last_event_type||"—");
+    $("botUsername").textContent=b.bot_username?("@"+b.bot_username):"—";
+    $("lastEvent").textContent=(b.last_event_type||"—")+" • "+fmtDate(b.last_event_at);
+    $("lastUser").textContent=b.last_event_user_id??"—";
+    $("handlerErrors").textContent=totalErrors(b.handler_errors);
+    $("evStart").textContent=Number(b.event_counts?.start||0).toLocaleString("fa-IR");
+    $("evCallback").textContent=Number(b.event_counts?.callback||0).toLocaleString("fa-IR");
+    $("evMessage").textContent=Number(b.event_counts?.message||0).toLocaleString("fa-IR");
+    const ev=Math.min(100,(Number(b.event_counts?.start||0)+Number(b.event_counts?.callback||0)+Number(b.event_counts?.message||0))*2);
+    $("activityProgress").style.width=ev+"%";
+    healthBox("hTelegram",connected,connected?"متصل":"قطع");
+    healthBox("hHandlers",b.handlers_registered===true,b.handlers_registered?"فعال":"نافعال");
+    healthBox("hProcessing",!paused,paused?"متوقف":"فعال");
+    healthBox("hStorage",true,"Volume متصل");
+  }catch(e){$("heroTitle").textContent="خطای ارتباط با داشبورد";$("heroDesc").textContent=e.message}
 }
-async function loadLogs(){
+async function loadDiagnostics(){
   try{
-    const j=await(await fetch("/api/logs?lines=300",{cache:"no-store"})).json();
-    let arr=(j.lines||[]).map(translateLog);
-    const q=($("logFilter").value||"").trim().toLowerCase();
-    if(q)arr=arr.filter(x=>x.toLowerCase().includes(q));
-    $("logs").textContent=arr.join("\n");
-    $("logs").scrollTop=$("logs").scrollHeight;
-    $("logMeta").textContent="نمایش "+arr.length+" خط • "+new Date().toLocaleTimeString("fa-IR");
-  }catch(e){$("logs").textContent="[داشبورد] خطا در دریافت لاگ: "+e.message;}
+    const j=await(await fetch("/api/diagnostics",{cache:"no-store"})).json();
+    $("diagDeployment").textContent=j.deployment_id?String(j.deployment_id).slice(0,18)+"…":"—";
+    $("diagMonitor").textContent=j.telegram_connected?"API + Telegram سالم":"نیازمند بررسی";
+    $("diagDataDir").textContent=j.storage?.data_dir||"—";
+    const s=j.storage||{};
+    $("diagHealth").innerHTML=[
+      ["Telegram",j.telegram_connected],
+      ["Handlers",j.handlers_registered],
+      ["Processing",j.processing_enabled],
+      ["data.json",s.data_file_exists&&s.data_file_writable],
+      ["sessions/",s.admin_sessions_dir_exists&&s.admin_sessions_writable]
+    ].map(x=>'<div class="health '+(x[1]?"ok":"bad")+'"><span class="name">'+x[0]+'</span><span class="state">'+(x[1]?"سالم":"بررسی لازم")+'</span></div>').join("");
+    $("systemInfo").textContent=JSON.stringify(j,null,2);
+    $("storageInfo").innerHTML=[
+      ["پوشه داده",s.data_dir||"—",true],
+      ["data.json",s.data_file_exists?"وجود دارد":"وجود ندارد",s.data_file_exists&&s.data_file_writable],
+      ["admin_sessions",s.admin_sessions_dir_exists?"وجود دارد":"وجود ندارد",s.admin_sessions_dir_exists&&s.admin_sessions_writable],
+      ["Session count",j.sessions??0,true]
+    ].map(x=>'<div class="metric"><span>'+esc(x[0])+'</span><span class="'+(x[2]?"good":"bad")+'">'+esc(x[1])+'</span></div>').join("");
+  }catch(e){$("systemInfo").textContent="Diagnostics unavailable: "+e.message}
 }
 async function postApi(path,payload){
   const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),cache:"no-store"});
-  const j=await r.json();
-  if(!r.ok||j.ok===false)throw new Error(j.error||j.message||"خطای ناشناخته");
-  return j;
+  let j={};try{j=await r.json()}catch{}
+  if(!r.ok||j.ok===false)throw new Error(j.error||j.message||("HTTP "+r.status));
+  return j
 }
 async function controlBot(action){
+  if(action==="restart"&&!confirm("ربات Restart شود؟ چند ثانیه قطع و دوباره متصل می‌شود."))return;
   $("controlMsg").textContent="در حال اجرای عملیات...";
   try{
-    const j=await postApi("/api/control",{action});
-    $("controlMsg").textContent=j.message||"عملیات انجام شد"; showToast(j.message||"عملیات انجام شد");
-    setTimeout(loadStatus,800);
-    if(action==="restart")setTimeout(loadStatus,4500);
-  }catch(e){$("controlMsg").textContent=e.message;showToast(e.message,false);}
+    const j=await postApi("/api/control",{action});$("controlMsg").textContent=j.message||"انجام شد";showToast(j.message||"انجام شد");
+    setTimeout(()=>{loadStatus();loadDiagnostics()},900);
+    if(action==="restart")setTimeout(()=>refreshAll(false),5000)
+  }catch(e){$("controlMsg").textContent=e.message;showToast(e.message,false)}
 }
 async function loadUsers(){
   try{
     const q=encodeURIComponent(($("userSearch").value||"").trim());
     const j=await(await fetch("/api/users?q="+q+"&limit=500",{cache:"no-store"})).json();
-    const body=$("usersBody"); body.innerHTML="";
+    const body=$("usersBody");body.innerHTML="";
     (j.users||[]).forEach(u=>{
+      const id=Number(u.id);const role=u.owner?"♛ مالک":u.admin?"🛡 مدیر":"👤 کاربر";const st=u.blocked?"🚫 بلاک":"✅ فعال";
       const tr=document.createElement("tr");
-      const role=u.owner?"👑 مالک":u.admin?"🛡️ ادمین":"👤 کاربر";
-      const state=u.blocked?"🚫 بلاک":"✅ فعال";
-      tr.innerHTML="<td>"+esc(u.id)+"</td><td>"+role+"</td><td>"+state+"</td><td>"+(u.language==="en"?"English":"فارسی")+"</td><td>"+esc(fmtDate(u.first_seen))+"</td><td>"+esc(fmtDate(u.last_seen))+"</td><td><button onclick=\"toggleBlock("+Number(u.id)+","+(!u.blocked)+")\">"+(u.blocked?"✅ آنبلاک":"🚫 بلاک")+"</button> <button onclick=\"messageUser("+Number(u.id)+")\">✉️ پیام</button></td>";
-      body.appendChild(tr);
+      tr.innerHTML="<td>"+esc(u.id)+"</td><td>"+role+"</td><td>"+st+"</td><td>"+(u.language==="en"?"English":"فارسی")+"</td><td>"+esc(fmtDate(u.first_seen))+"</td><td>"+esc(fmtDate(u.last_seen))+"</td><td><div class='table-actions'><button class='mini' onclick='toggleBlock("+id+","+(!u.blocked)+")'>"+(u.blocked?"آنبلاک":"بلاک")+"</button><button class='mini' onclick='messageUser("+id+")'>پیام</button></div></td>";
+      body.appendChild(tr)
     });
-    $("userMeta").textContent="نمایش "+(j.users||[]).length+" کاربر • کل "+(j.total??0);
-  }catch(e){$("usersBody").innerHTML="<tr><td colspan='7'>❌ "+esc(e.message)+"</td></tr>";}
+    if(!(j.users||[]).length)body.innerHTML="<tr><td colspan='7' class='empty'>کاربری پیدا نشد.</td></tr>";
+    $("userMeta").textContent="نمایش "+(j.users||[]).length+" • کل "+(j.total??0)
+  }catch(e){$("usersBody").innerHTML="<tr><td colspan='7' class='empty'>❌ "+esc(e.message)+"</td></tr>"}
 }
 async function toggleBlock(id,unblock){
-  try{const j=await postApi("/api/users",{action:unblock?"unblock":"block",user_id:id});showToast(j.message||"انجام شد");await Promise.all([loadUsers(),loadStatus(),loadLogs()]);}
-  catch(e){showToast(e.message,false);}
+  try{const j=await postApi("/api/users",{action:unblock?"unblock":"block",user_id:id});showToast(j.message||"انجام شد");await Promise.all([loadUsers(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
 }
 async function messageUser(id){
-  const msg=prompt("متن پیام برای کاربر "+id+":");
-  if(!msg)return;
-  try{const j=await postApi("/api/users",{action:"message",user_id:id,message:msg});showToast(j.message||"پیام ارسال شد");await loadLogs();}
-  catch(e){showToast(e.message,false);}
+  const msg=prompt("متن پیام برای کاربر "+id+":");if(!msg)return;
+  try{const j=await postApi("/api/users",{action:"message",user_id:id,message:msg});showToast(j.message||"ارسال شد");await loadLogs()}catch(e){showToast(e.message,false)}
 }
 async function loadAdmins(){
   try{
     const j=await(await fetch("/api/admins",{cache:"no-store"})).json();
-    $("adminsBox").innerHTML=(j.admins||[]).map(a=>{
-      const status=a.owner?"👑 مالک":a.active?"🟢 فعال":"🔴 منقضی";
-      return "<div style='padding:8px 0;border-bottom:1px solid var(--line)'>🆔 <b>"+esc(a.id)+"</b> — "+status+" — انقضا: "+esc(a.expires?fmtDate(a.expires):"بدون انقضا")+"</div>";
-    }).join("")||"ادمینی ثبت نشده است.";
-  }catch(e){$("adminsBox").textContent="❌ "+e.message;}
+    $("adminsBox").innerHTML=(j.admins||[]).map(a=>"<div class='metric'><span>🆔 "+esc(a.id)+"</span><span class='"+(a.owner||a.active?"good":"bad")+"'>"+(a.owner?"مالک":a.active?"فعال":"منقضی")+" • "+esc(a.expires?fmtDate(a.expires):"بدون انقضا")+"</span></div>").join("")||"<div class='empty'>مدیری ثبت نشده است.</div>"
+  }catch(e){$("adminsBox").textContent="❌ "+e.message}
 }
 async function adminAction(action){
   const id=$("adminId").value.trim(),days=$("adminDays").value.trim()||"30";
-  if(!/^\d+$/.test(id)){showToast("آیدی عددی وارد کنید",false);return;}
-  try{const j=await postApi("/api/admins",{action,user_id:Number(id),days:Number(days)});showToast(j.message||"انجام شد");await Promise.all([loadAdmins(),loadStatus(),loadLogs()]);}
-  catch(e){showToast(e.message,false);}
+  if(!/^\d+$/.test(id)){showToast("آیدی عددی وارد کنید",false);return}
+  try{const j=await postApi("/api/admins",{action,user_id:Number(id),days:Number(days)});showToast(j.message||"انجام شد");await Promise.all([loadAdmins(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
 }
 async function loadChannels(){
   try{
     const j=await(await fetch("/api/channels",{cache:"no-store"})).json();
-    $("channelsBox").innerHTML=(j.channels||[]).map(x=>"<div style='padding:8px 0;border-bottom:1px solid var(--line)'>📢 <b>"+esc(x.channel)+"</b></div>").join("")||"کانال اجباری ثبت نشده است.";
-  }catch(e){$("channelsBox").textContent="❌ "+e.message;}
+    $("channelsBox").innerHTML=(j.channels||[]).map(x=>"<div class='metric'><span>◌</span><span>"+esc(x.channel)+"</span></div>").join("")||"<div class='empty'>کانال اجباری ثبت نشده است.</div>"
+  }catch(e){$("channelsBox").textContent="❌ "+e.message}
 }
 async function channelAction(action){
-  const c=$("channelName").value.trim();
-  if(!c){showToast("نام کانال را وارد کنید",false);return;}
-  try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs()]);}
-  catch(e){showToast(e.message,false);}
+  const c=$("channelName").value.trim();if(!c){showToast("نام کانال را وارد کنید",false);return}
+  try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs()])}catch(e){showToast(e.message,false)}
 }
-async function refreshAll(){await Promise.all([loadStatus(),loadLogs(),loadUsers(),loadAdmins(),loadChannels()]);showToast("اطلاعات کامل بروزرسانی شد");}
+async function refreshAll(toast=true){
+  await Promise.all([loadStatus(),loadDiagnostics(),loadLogs(),loadUsers(),loadAdmins(),loadChannels()]);
+  if(toast)showToast("اطلاعات کامل بروزرسانی شد")
+}
 function startTimers(){
   clearInterval(statusTimer);clearInterval(logTimer);clearInterval(userTimer);
   if(!auto)return;
-  statusTimer=setInterval(loadStatus,5000);
-  logTimer=setInterval(loadLogs,10000);
-  userTimer=setInterval(loadUsers,15000);
+  statusTimer=setInterval(()=>{loadStatus();loadDiagnostics()},5000);
+  logTimer=setInterval(loadLogs,9000);
+  userTimer=setInterval(loadUsers,15000)
 }
-function toggleAuto(){
-  auto=!auto;
-  $("autoBtn").textContent=auto?"⏸ توقف بروزرسانی خودکار":"▶ ادامه بروزرسانی خودکار";
-  startTimers();
-}
-$("logFilter").addEventListener("input",loadLogs);
-$("userSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadUsers();});
-refreshAll();
-startTimers();
+$("logFilter").addEventListener("input",()=>renderLogs(cachedLogs));
+$("userSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadUsers()});
+
+(function initCanvas(){
+  const c=$("bg"),ctx=c.getContext("2d");let pts=[],w,h;
+  function resize(){w=c.width=innerWidth*devicePixelRatio;h=c.height=innerHeight*devicePixelRatio;pts=Array.from({length:Math.min(65,Math.floor(innerWidth/20))},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.16*devicePixelRatio,vy:(Math.random()-.5)*.16*devicePixelRatio,r:(.5+Math.random()*1.6)*devicePixelRatio}))}
+  function frame(){
+    ctx.clearRect(0,0,w,h);ctx.fillStyle="rgba(120,165,255,.42)";
+    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}
+    requestAnimationFrame(frame)
+  }
+  addEventListener("resize",resize,{passive:true});resize();frame()
+})();
+
+refreshAll(false);startTimers();
 </script>
 </body>
 </html>
