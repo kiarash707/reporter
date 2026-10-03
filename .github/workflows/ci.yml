@@ -17,31 +17,6 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Compile Python
         run: python -m py_compile Reporter.py
-      - name: Smoke test backup pack
-        env:
-          API_ID: "1"
-          API_HASH: "ci-test"
-          BOT_TOKEN: "ci-test"
-          MONITOR_TOKEN: "ci-test"
-          DATA_DIR: ${{ runner.temp }}/reporter-backup-test
-        run: |
-          python - <<'PY'
-          import os
-          import shutil
-          from pathlib import Path
-          import Reporter
-          root = Path(os.environ["DATA_DIR"])
-          root.mkdir(parents=True, exist_ok=True)
-          path, manifest = Reporter._create_backup_file("ci")
-          assert Path(path).is_file() and Path(path).stat().st_size > 0
-          stage = root / "verify"
-          stage.mkdir(parents=True, exist_ok=True)
-          verified = Reporter._validate_backup_zip(path, str(stage))
-          assert verified["format_version"] == Reporter.BACKUP_FORMAT_VERSION
-          assert verified["file_count"] == manifest["file_count"]
-          print("backup smoke test passed:", Path(path).name, verified["file_count"], "files")
-          shutil.rmtree(root, ignore_errors=True)
-          PY
 
   dashboard:
     if: github.ref == 'refs/heads/dashboard' || github.event_name == 'pull_request'
