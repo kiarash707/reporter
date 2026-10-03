@@ -8,3 +8,5 @@ admin_sessions/
 .env
 .venv/
 venv/
+data/
+data.json.tmp
