@@ -221,6 +221,150 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
 @media (prefers-reduced-motion:reduce){.orb,.grid-floor,.scan-ring,.hero:after{animation:none!important}}
 
 /* v3 elite operations layer */
+
+/* v4 cinematic cyber-command aesthetic */
+:root{
+  --danger:#ff3154;--danger2:#ff7a45;--amber:#ffc857;--ice:#8ee7ff;
+  --hud:rgba(255,49,84,.72);
+  --hud-line:rgba(255,92,110,.22);
+}
+body{
+  background:
+    radial-gradient(900px 520px at 82% 8%,rgba(255,40,70,.13),transparent 58%),
+    radial-gradient(800px 520px at 12% 90%,rgba(255,119,60,.08),transparent 62%),
+    radial-gradient(1100px 680px at 50% 45%,rgba(14,25,45,.55),transparent 72%),
+    linear-gradient(180deg,#020409 0%,#050811 48%,#020307 100%);
+}
+body:before{background:#ff193f;opacity:.14}
+body:after{background:#ff6b32;opacity:.10}
+body:global(){}
+.wrap{position:relative}
+.wrap:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.009) 4px 5px);
+  mix-blend-mode:screen;opacity:.32;
+}
+.topbar{position:relative}
+.topbar:after{
+  content:"";position:absolute;left:0;right:0;bottom:-10px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,49,84,.55),rgba(142,231,255,.22),transparent);
+  box-shadow:0 0 14px rgba(255,49,84,.16)
+}
+.brandmark{
+  position:relative;background:
+    radial-gradient(circle at 30% 30%,rgba(255,49,84,.32),transparent 42%),
+    linear-gradient(145deg,rgba(255,49,84,.13),rgba(110,168,255,.10));
+  border-color:rgba(255,71,94,.3);
+  box-shadow:0 0 38px rgba(255,49,84,.14),inset 0 0 22px rgba(255,49,84,.08)
+}
+.brandmark:after{
+  content:"";position:absolute;inset:5px;border:1px solid rgba(255,122,69,.22);border-radius:13px;
+  animation:cornerPulse 2.8s ease-in-out infinite
+}
+.nav-shell{border-color:rgba(255,92,110,.16);box-shadow:0 22px 80px rgba(0,0,0,.52),0 0 30px rgba(255,49,84,.04)}
+.nav button.active{
+  background:linear-gradient(135deg,rgba(255,49,84,.15),rgba(255,122,69,.08));
+  box-shadow:inset 0 0 0 1px rgba(255,92,110,.18),0 0 22px rgba(255,49,84,.04)
+}
+.card{
+  background:linear-gradient(145deg,rgba(10,14,23,.82),rgba(4,8,14,.72));
+  border-color:rgba(148,163,184,.11);
+}
+.card:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,49,84,.045) 50%,transparent 100%);
+  transform:translateX(-100%);animation:hudSweep 9s linear infinite
+}
+.hero{
+  min-height:282px;
+  background:
+    radial-gradient(circle at 76% 18%,rgba(255,49,84,.15),transparent 28%),
+    radial-gradient(circle at 24% 100%,rgba(255,122,69,.10),transparent 36%),
+    linear-gradient(145deg,rgba(8,11,18,.92),rgba(4,8,14,.78))
+}
+.hero h2{text-shadow:0 0 30px rgba(255,49,84,.10)}
+.eyebrow{color:#ff8596;letter-spacing:2px}
+.hero .desc{max-width:700px}
+.hero-actions button:first-child{border-color:rgba(69,227,154,.28)}
+.hero-actions button:nth-child(2){border-color:rgba(255,49,84,.28)}
+.visual{
+  min-height:230px;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(255,49,84,.08),transparent 38%),
+    linear-gradient(160deg,rgba(8,13,22,.94),rgba(2,5,9,.96));
+  border-color:rgba(255,92,110,.18);
+  box-shadow:inset 0 0 55px rgba(255,49,84,.035),0 0 34px rgba(0,0,0,.35)
+}
+.visual:before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 49.6%,rgba(142,231,255,.18) 50%,transparent 50.4%),
+             linear-gradient(0deg,transparent 49.6%,rgba(142,231,255,.13) 50%,transparent 50.4%);
+  opacity:.35
+}
+.visual:after{background:linear-gradient(90deg,transparent,rgba(255,49,84,.72),rgba(142,231,255,.55),transparent)}
+.radar{
+  width:160px;height:160px;
+  border-color:rgba(255,92,110,.28);
+  box-shadow:inset 0 0 38px rgba(255,49,84,.08),0 0 50px rgba(255,49,84,.09)
+}
+.radar:before{border-color:rgba(142,231,255,.16)}
+.radar:after{border-left-color:rgba(255,49,84,.85);animation:spin 3.2s linear infinite}
+.radar-dot{background:var(--danger);box-shadow:0 0 18px var(--danger)}
+.pill{background:rgba(7,11,18,.84);border-color:rgba(255,255,255,.10)}
+.kpi-accent{border-color:rgba(255,92,110,.17)}
+.danger-glow{border-color:rgba(255,49,84,.40)!important;box-shadow:0 0 0 1px rgba(255,49,84,.10),0 20px 60px rgba(255,49,84,.08)}
+.success-glow{border-color:rgba(69,227,154,.28)!important}
+.threat-shell{
+  position:absolute;inset:11px;border:1px solid rgba(255,92,110,.11);border-radius:15px;
+  pointer-events:none;
+}
+.threat-corner{position:absolute;width:34px;height:34px;border-color:var(--danger);opacity:.8}
+.threat-corner.tl{top:-1px;left:-1px;border-top:2px solid;border-left:2px solid}
+.threat-corner.tr{top:-1px;right:-1px;border-top:2px solid;border-right:2px solid}
+.threat-corner.bl{bottom:-1px;left:-1px;border-bottom:2px solid;border-left:2px solid}
+.threat-corner.br{bottom:-1px;right:-1px;border-bottom:2px solid;border-right:2px solid}
+.threat-readout{
+  position:absolute;left:16px;bottom:14px;padding:8px 10px;border:1px solid rgba(255,92,110,.17);
+  border-radius:10px;background:rgba(2,5,9,.76);font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:#ffadb8;letter-spacing:.7px;backdrop-filter:blur(8px)
+}
+.target-blip{
+  position:absolute;width:9px;height:9px;border-radius:50%;background:var(--danger);
+  box-shadow:0 0 0 3px rgba(255,49,84,.09),0 0 20px rgba(255,49,84,.8);
+  animation:targetBlink 1.6s ease-in-out infinite
+}
+.target-blip:before,.target-blip:after{
+  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(255,92,110,.5);border-radius:50%;
+}
+.target-blip:before{width:22px;height:22px}.target-blip:after{width:34px;height:34px;opacity:.35}
+.target-1{left:22%;top:36%;animation-delay:-.2s}.target-2{right:28%;top:24%;animation-delay:-.8s}.target-3{left:64%;bottom:25%;animation-delay:-1.2s}.target-4{right:10%;bottom:19%;animation-delay:-.4s}
+.hud-map{position:absolute;inset:18px 20px 28px;opacity:.72}
+.hud-map path,.hud-map polyline,.hud-map circle{fill:none;stroke:rgba(142,231,255,.23);stroke-width:1}
+.hud-map .route{stroke:rgba(255,92,110,.48);stroke-dasharray:3 8;animation:dashMove 5s linear infinite}
+.hud-map .continent{fill:rgba(142,231,255,.035);stroke:rgba(142,231,255,.20)}
+.warning-ticker{
+  display:flex;align-items:center;justify-content:center;gap:9px;margin:14px 0 0;padding:8px 12px;
+  border:1px solid rgba(255,49,84,.16);border-radius:12px;background:rgba(255,49,84,.035);
+  color:#ff9caa;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.7px;text-transform:uppercase;overflow:hidden
+}
+.warning-ticker b{color:var(--danger);animation:blink .9s infinite}
+.section-ribbon{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;margin:14px 0 0;
+  border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.015);
+  font-size:10px;color:#8293ab;letter-spacing:.6px
+}
+.section-ribbon strong{color:#dce6f3}
+.hud-stat{
+  padding:13px;border:1px solid rgba(255,92,110,.11);border-radius:15px;background:rgba(5,8,13,.58);
+  position:relative;overflow:hidden
+}
+.hud-stat:before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,49,84,.75),transparent)}
+.hud-stat .big{font-size:22px;font-weight:850;color:#f7f9fc}.hud-stat .small{margin-top:4px;font-size:10px;color:var(--muted)}
+@keyframes cornerPulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.85;transform:scale(1.025)}}
+@keyframes hudSweep{to{transform:translateX(100%)}}
+@keyframes targetBlink{0%,100%{opacity:.72;transform:scale(.92)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes dashMove{to{stroke-dashoffset:-60}}
+
 .pro-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
 .span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
 .telemetry-card{min-height:150px}
@@ -308,11 +452,22 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
           <span class="pill" id="overall"><span class="dot"></span><span>در حال بررسی</span></span>
           <span class="pill" id="eventPill">آخرین Event: —</span>
           <span class="pill" id="updatedPill">آخرین بررسی: —</span><span class="pill" id="stalePill">داده تازه</span>
+          <span class="pill" id="threatPill">⚠ THREAT GRID: ARMED</span>
         </div>
       </div>
       <div class="visual">
-        <div class="visual-grid"></div><div class="orb one"></div><div class="orb two"></div>
+        <div class="visual-grid"></div>
+        <div class="threat-shell">
+          <i class="threat-corner tl"></i><i class="threat-corner tr"></i><i class="threat-corner bl"></i><i class="threat-corner br"></i>
+        </div>
+        <svg class="hud-map" viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true">
+          <path class="continent" d="M34 120 L82 98 L121 111 L154 83 L208 96 L247 72 L303 89 L344 74 L377 102 L431 89 L468 113 L520 103 L561 130 L530 153 L489 145 L454 171 L419 160 L392 187 L349 176 L312 201 L270 182 L236 205 L198 180 L155 191 L126 160 L88 166 L57 149 Z"/>
+          <polyline class="route" points="55,142 118,126 175,147 249,114 323,150 392,121 462,150 548,124"/>
+          <circle cx="176" cy="147" r="3"/><circle cx="323" cy="150" r="3"/><circle cx="462" cy="150" r="3"/>
+        </svg>
+        <div class="target-blip target-1"></div><div class="target-blip target-2"></div><div class="target-blip target-3"></div><div class="target-blip target-4"></div>
         <div class="visual-center"><div class="radar"><div class="radar-dot"></div></div></div>
+        <div class="threat-readout">TACTICAL VISUAL // TELEMETRY ONLY // SIMULATION GRID</div>
       </div>
     </div>
 
@@ -326,6 +481,8 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
       <div class="card kpi"><div class="label">کانال اجباری</div><div id="channels" class="value">—</div><div class="notice">Force Join</div></div>
       <div class="card kpi"><div class="label">ناحیه اجرا</div><div id="region" class="value" style="font-size:18px">—</div><div class="notice" id="deployMeta">—</div></div>
     </div>
+    <div class="warning-ticker"><b>● LIVE</b><span>SECURE COMMAND FEED</span><span>•</span><span>TELEMETRY STREAM</span><span>•</span><span>THREAT VISUALIZATION</span><span>•</span><span>NO WEAPON CONTROL</span></div>
+    <div class="section-ribbon"><strong>◈ COMMAND GRID</strong><span>نمای بصری سینمایی • اطلاعات واقعی پنل فقط از Runtime خوانده می‌شود</span></div>
 
     <div class="grid3 section">
       <div class="card">
@@ -376,6 +533,23 @@ button.busy:before{content:"";position:absolute;width:14px;height:14px;border:2p
     </div>
 
     <div class="pro-grid section">
+      <div class="card span-8" style="min-height:220px">
+        <div class="title"><h2>☢ COMMAND VISUAL</h2><span class="meta">CINEMATIC TACTICAL SIMULATION</span></div>
+        <div class="grid3">
+          <div class="hud-stat"><div class="big" id="threatScore">07.4</div><div class="small">THREAT INDEX</div></div>
+          <div class="hud-stat"><div class="big" id="lockState">LOCKED</div><div class="small">VISUAL TRACK</div></div>
+          <div class="hud-stat"><div class="big" id="sectorState">A-17</div><div class="small">SECTOR</div></div>
+        </div>
+        <div style="margin-top:10px" class="notice">این بخش صرفاً جلوه و وضعیت‌نمایی بصری است؛ هیچ Target، سلاح یا عملیات نفوذی را کنترل نمی‌کند.</div>
+      </div>
+      <div class="card span-4" style="min-height:220px">
+        <div class="title"><h2>🚨 ALERT MATRIX</h2><span class="meta">REAL-TIME SIGNAL</span></div>
+        <div class="metric"><span>امنیت API</span><span class="good">SECURE</span></div>
+        <div class="metric"><span>شبکه Telegram</span><span id="alertTelegram">STABLE</span></div>
+        <div class="metric"><span>Event pipeline</span><span id="alertEvents">ACTIVE</span></div>
+        <div class="metric"><span>Runtime errors</span><span id="alertErrors">0</span></div>
+        <div class="progress"><span id="alertProgress"></span></div>
+      </div>
       <div class="card telemetry-card span-3">
         <div class="telemetry-head"><div><div class="label">سلامت سرویس</div><div id="healthPct" class="telemetry-value">—</div></div><span class="pill" id="healthState">در حال بررسی</span></div>
         <div class="progress"><span id="healthProgress"></span></div>
@@ -724,6 +898,7 @@ async function loadStatus(){
     $("tab-overview").classList.toggle("success-glow",online&&connected&&b.handlers_registered===true&&totalErrors(b.handler_errors)===0);
     recordTelemetry(b,Number(j._latency??(performance.now()-started)));
     updateAdvancedTelemetry(b);
+    updateThreatVisual(b);
   }catch(e){
     markFailure(e.message);
     $("telegram").textContent="خطا";$("telegram").className="value bad";
@@ -822,6 +997,26 @@ async function channelAction(action){
   const c=$("channelName").value.trim();if(!c){showToast("نام کانال را وارد کنید",false);return;}
   if(!/^@?[A-Za-z0-9_]{4,64}$/.test(c)){showToast("فرمت username کانال درست نیست",false);return;}
   try{const j=await postApi("/api/channels",{action,channel:c});showToast(j.message||"انجام شد");$("channelName").value="";await Promise.all([loadChannels(),loadStatus(),loadLogs(false)]);}catch(e){showToast(e.message,false);}
+}
+
+function updateThreatVisual(b){
+  const errors=totalErrors(b?.handler_errors);
+  const online=b?.status==="online",connected=!!b?.telegram_connected;
+  const eventTotal=Number(b?.event_total||(
+    Number(b?.event_counts?.start||0)+Number(b?.event_counts?.callback||0)+Number(b?.event_counts?.message||0)
+  ));
+  const score=(errors*2.7)+(online?1.3:7.8)+(connected?0:5.6)+Math.min(4.8,eventTotal/120);
+  $("threatScore").textContent=Math.max(0,score).toFixed(1).padStart(4,"0");
+  $("lockState").textContent=online&&connected?"LOCKED":"SEARCH";
+  $("sectorState").textContent=online?("A-"+String((eventTotal%89)+10).padStart(2,"0")):"OFFLINE";
+  $("threatPill").textContent=online&&connected?"⚠ THREAT GRID: ARMED":"⚠ THREAT GRID: SEARCH";
+  $("alertTelegram").textContent=connected?"STABLE":"DEGRADED";
+  $("alertTelegram").className=connected?"good":"bad";
+  $("alertEvents").textContent=online?"ACTIVE":"PAUSED";
+  $("alertEvents").className=online?"good":"warn";
+  $("alertErrors").textContent=errors;
+  $("alertErrors").className=errors?"bad":"good";
+  $("alertProgress").style.width=Math.min(100,Math.round(score/12*100))+"%";
 }
 
 function healthPercent(b){
@@ -986,6 +1181,22 @@ tab(tabName,false);
 refreshAll(false);
 startTimers();
 
+
+(function initThreatMotion(){
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduce)return;
+  const blips=[...document.querySelectorAll(".target-blip")];
+  let t=0;
+  setInterval(()=>{
+    t++;
+    blips.forEach((el,i)=>{
+      const x=8+((t*(i+3)*7)%78), y=14+((t*(i+5)*11)%67);
+      el.style.left=x+"%";el.style.top=y+"%";
+    });
+    const score=$("threatScore");
+    if(score && !lastStatus)score.textContent=(6+Math.random()*3).toFixed(1);
+  },2200);
+})();
 
 (function init3D(){
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
