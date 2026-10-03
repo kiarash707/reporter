@@ -56,6 +56,8 @@ MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "")
 MONITOR_PORT = int(os.getenv("MONITOR_PORT", "8080"))
 BOT_STARTED_AT = None
 MONITOR_SERVER = None
+BOT_LOOP = None
+BOT_PROCESSING_ENABLED = True
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -249,6 +251,76 @@ def clear_user_cache(user_id=None):
                 delattr(get_user_sessions, attr)
 
 USER_STATE = {}
+
+def set_bot_processing(enabled):
+    global BOT_PROCESSING_ENABLED
+    BOT_PROCESSING_ENABLED = bool(enabled)
+    data = load_data()
+    data["bot_status"] = "on" if BOT_PROCESSING_ENABLED else "off"
+    save_data(data)
+    logger.info("Bot processing %s by dashboard control", "enabled" if BOT_PROCESSING_ENABLED else "paused")
+
+
+def dashboard_user_snapshot():
+    data = load_data()
+    blocked = {str(x) for x in data.get("blocked", [])}
+    admins = data.get("admins", {})
+    now_tehran = datetime.now(pytz.timezone("Asia/Tehran"))
+    rows = []
+    for raw_uid in data.get("users", []):
+        uid = int(raw_uid) if str(raw_uid).isdigit() else raw_uid
+        info = admins.get(str(uid), {})
+        expires = info.get("expires")
+        active_admin = isinstance(expires, datetime) and expires > now_tehran
+        rows.append({
+            "id": uid,
+            "blocked": str(uid) in blocked,
+            "admin": is_owner(uid) or active_admin,
+            "owner": is_owner(uid),
+            "language": data.get("user_lang", {}).get(str(uid), "fa"),
+            "admin_expires": expires.isoformat() if isinstance(expires, datetime) else None
+        })
+    rows.sort(key=lambda x: int(x["id"]) if str(x["id"]).isdigit() else 0, reverse=True)
+    return rows
+
+
+def dashboard_admin_snapshot():
+    data = load_data()
+    now_tehran = datetime.now(pytz.timezone("Asia/Tehran"))
+    rows = []
+    seen = set()
+    for uid in OWNER_IDS:
+        rows.append({"id": uid, "owner": True, "active": True, "expires": None})
+        seen.add(str(uid))
+    for uid_str, info in data.get("admins", {}).items():
+        if uid_str in seen:
+            continue
+        expires = info.get("expires")
+        active = isinstance(expires, datetime) and expires > now_tehran
+        rows.append({
+            "id": int(uid_str) if uid_str.isdigit() else uid_str,
+            "owner": False,
+            "active": active,
+            "expires": expires.isoformat() if isinstance(expires, datetime) else None
+        })
+    return rows
+
+
+def dashboard_channel_snapshot():
+    data = load_data()
+    return [{"channel": str(x)} for x in data.get("force_channels", [])]
+
+
+def run_dashboard_coroutine(coro, timeout=30):
+    if BOT_LOOP is None:
+        raise RuntimeError("Bot event loop is not ready")
+    future = asyncio.run_coroutine_threadsafe(coro, BOT_LOOP)
+    try:
+        return future.result(timeout=timeout)
+    except Exception:
+        future.cancel()
+        raise
+
 
 async def test_smtp_connection(email, app_password):
     try:
@@ -560,6 +632,9 @@ def admin_duration_keyboard(lang):
 
 async def start_handler(event):
     user_id = event.sender_id
+    if not BOT_PROCESSING_ENABLED:
+        await event.reply("⏸️ ربات موقتاً متوقف است. از داشبورد آن را فعال کنید.")
+        return
     if is_blocked(user_id):
         await event.reply("🚫 شما بلاک هستید" if get_user_lang(user_id) == "fa" else "🚫 You are blocked")
         return
@@ -590,6 +665,9 @@ async def start_handler(event):
 
 async def callback_handler(event):
     data_str = event.data.decode('utf-8')
+    if not BOT_PROCESSING_ENABLED:
+        await event.answer("⏸️ ربات موقتاً متوقف است.", alert=True)
+        return
     user_id = event.sender_id
     lang = get_user_lang(user_id) or "fa"
 
@@ -1087,6 +1165,8 @@ async def telegram_callback(event, data, user_id, lang):
 # =============== MESSAGE HANDLERS ===============
 
 async def message_handler(event):
+    if not BOT_PROCESSING_ENABLED:
+        return
     if event.text.startswith('/'):
         return
 
@@ -1792,6 +1872,9 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "send_today": data.get("send_today", 0),
                     "send_week": data.get("send_week", 0),
                     "bot_status": data.get("bot_status", "on"),
+                    "processing_enabled": BOT_PROCESSING_ENABLED,
+                    "blocked_users": len(data.get("blocked", [])),
+                    "force_channels": len(data.get("force_channels", [])),
                     "smtp_status": data.get("global_smtp_status", "on"),
                     "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter"),
                     "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
@@ -1799,6 +1882,27 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
                     "monitor_port": MONITOR_PORT
                 })
+                return
+
+            if parsed.path == "/api/users":
+                params = parse_qs(parsed.query)
+                query = params.get("q", [""])[0].strip().lower()
+                users = dashboard_user_snapshot()
+                if query:
+                    users = [u for u in users if query in str(u["id"]).lower()]
+                try:
+                    limit = min(500, max(1, int(params.get("limit", ["300"])[0])))
+                except ValueError:
+                    limit = 300
+                self._send_json(200, {"users": users[:limit], "total": len(users)})
+                return
+
+            if parsed.path == "/api/admins":
+                self._send_json(200, {"admins": dashboard_admin_snapshot()})
+                return
+
+            if parsed.path == "/api/channels":
+                self._send_json(200, {"channels": dashboard_channel_snapshot()})
                 return
 
             if parsed.path == "/api/logs":
@@ -1818,6 +1922,161 @@ class MonitorHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
 
+
+    def do_POST(self):
+        try:
+            parsed = urlparse(self.path)
+            if not self._authorized():
+                self._send_json(401, {"error": "unauthorized"})
+                return
+
+            raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
+            payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
+
+            if parsed.path == "/api/control":
+                action = payload.get("action")
+                if action == "pause":
+                    set_bot_processing(False)
+                    self._send_json(200, {"ok": True, "message": "ربات متوقف شد"})
+                    return
+                if action == "resume":
+                    set_bot_processing(True)
+                    self._send_json(200, {"ok": True, "message": "ربات فعال شد"})
+                    return
+                if action == "restart":
+                    data = load_data()
+                    data["bot_status"] = "on"
+                    save_data(data)
+                    logger.warning("Restart requested from dashboard")
+                    self._send_json(200, {"ok": True, "message": "درخواست راه‌اندازی مجدد ثبت شد"})
+                    def delayed_exit():
+                        import time as _time
+                        _time.sleep(0.4)
+                        os._exit(1)
+                    threading.Thread(target=delayed_exit, daemon=True).start()
+                    return
+                self._send_json(400, {"ok": False, "error": "action_invalid"})
+                return
+
+            if parsed.path == "/api/users":
+                action = payload.get("action")
+                user_id = payload.get("user_id")
+                if not str(user_id).isdigit():
+                    self._send_json(400, {"ok": False, "error": "user_id_invalid"})
+                    return
+                user_id = int(user_id)
+                data = load_data()
+                blocked = data.setdefault("blocked", [])
+
+                if action == "block":
+                    if user_id not in [int(x) for x in blocked if str(x).isdigit()]:
+                        blocked.append(user_id)
+                    save_data(data)
+                    logger.info("User %s blocked from dashboard", user_id)
+                    self._send_json(200, {"ok": True, "message": "کاربر بلاک شد"})
+                    return
+
+                if action == "unblock":
+                    data["blocked"] = [x for x in blocked if str(x) != str(user_id)]
+                    save_data(data)
+                    logger.info("User %s unblocked from dashboard", user_id)
+                    self._send_json(200, {"ok": True, "message": "کاربر آنبلاک شد"})
+                    return
+
+                if action == "message":
+                    message = str(payload.get("message", "")).strip()
+                    if not message:
+                        self._send_json(400, {"ok": False, "error": "message_empty"})
+                        return
+                    run_dashboard_coroutine(bot_instance.send_message(user_id, message))
+                    logger.info("Dashboard sent a private message to user %s", user_id)
+                    self._send_json(200, {"ok": True, "message": "پیام ارسال شد"})
+                    return
+
+                self._send_json(400, {"ok": False, "error": "action_invalid"})
+                return
+
+            if parsed.path == "/api/admins":
+                action = payload.get("action")
+                user_id = payload.get("user_id")
+                if not str(user_id).isdigit():
+                    self._send_json(400, {"ok": False, "error": "user_id_invalid"})
+                    return
+                user_id = int(user_id)
+
+                if action == "add":
+                    try:
+                        days = int(payload.get("days", 30))
+                    except (TypeError, ValueError):
+                        days = 30
+                    days = min(3650, max(1, days))
+                    current_time = datetime.now(pytz.timezone("Asia/Tehran"))
+                    data = load_data()
+                    data.setdefault("admins", {})[str(user_id)] = {
+                        "expires": current_time + timedelta(days=days),
+                        "activated": current_time
+                    }
+                    data.setdefault("admin_data", {}).setdefault(str(user_id), {
+                        "smtp": [], "active_senders": [], "recipients": []
+                    })
+                    save_data(data)
+                    logger.info("Admin %s added from dashboard for %s days", user_id, days)
+                    self._send_json(200, {"ok": True, "message": "ادمین اضافه شد", "days": days})
+                    return
+
+                if action == "remove":
+                    if user_id in OWNER_IDS:
+                        self._send_json(400, {"ok": False, "error": "owner_cannot_be_removed"})
+                        return
+                    data = load_data()
+                    data.setdefault("admins", {}).pop(str(user_id), None)
+                    save_data(data)
+                    logger.info("Admin %s removed from dashboard", user_id)
+                    self._send_json(200, {"ok": True, "message": "ادمین حذف شد"})
+                    return
+
+                self._send_json(400, {"ok": False, "error": "action_invalid"})
+                return
+
+            if parsed.path == "/api/channels":
+                action = payload.get("action")
+                channel = str(payload.get("channel", "")).strip()
+                if not channel:
+                    self._send_json(400, {"ok": False, "error": "channel_empty"})
+                    return
+                if not channel.startswith("@"):
+                    channel = "@" + channel
+                data = load_data()
+                channels = data.setdefault("force_channels", [])
+
+                if action == "add":
+                    if channel not in channels:
+                        channels.append(channel)
+                    save_data(data)
+                    logger.info("Force channel %s added from dashboard", channel)
+                    self._send_json(200, {"ok": True, "message": "کانال اضافه شد"})
+                    return
+
+                if action == "remove":
+                    data["force_channels"] = [x for x in channels if str(x) != channel]
+                    save_data(data)
+                    logger.info("Force channel %s removed from dashboard", channel)
+                    self._send_json(200, {"ok": True, "message": "کانال حذف شد"})
+                    return
+
+                self._send_json(400, {"ok": False, "error": "action_invalid"})
+                return
+
+            self._send_json(404, {"error": "not_found"})
+        except Exception as exc:
+            logger.exception("Monitor POST error")
+            try:
+                self._send_json(500, {"error": str(exc)[:180]})
+            except Exception:
+                pass
+
+    def log_message(self, format, *args):
+        return
 
 def start_monitor_server():
     if not MONITOR_TOKEN:
@@ -1840,7 +2099,10 @@ def start_monitor_server():
 
 
 async def main():
-    global bot, bot_instance, BOT_STARTED_AT, MONITOR_SERVER
+    global bot, bot_instance, BOT_STARTED_AT, MONITOR_SERVER, BOT_LOOP, BOT_PROCESSING_ENABLED
+    BOT_LOOP = asyncio.get_running_loop()
+    persisted = load_data()
+    BOT_PROCESSING_ENABLED = persisted.get("bot_status", "on") != "off"
     bot = TelegramClient(BOT_SESSION_PATH, API_ID, API_HASH)
     bot_instance = bot
     await bot.start(bot_token=BOT_TOKEN)
