@@ -6,6 +6,9 @@ import logging
 import platform
 import hmac
 import threading
+import re
+import shutil
+from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from email.mime.text import MIMEText
@@ -41,11 +44,22 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 DATA_FILE = os.path.join(DATA_DIR, "data.json")
 ADMIN_SESSIONS_DIR = os.path.join(DATA_DIR, "admin_sessions")
+DATA_LOCK = threading.RLock()
+
+try:
+    os.chmod(DATA_DIR, 0o700)
+except OSError:
+    pass
+
 # The bot account is authenticated from BOT_TOKEN on every process start.
 # Do not reuse an old persistent MTProto bot session: it can belong to a different bot token.
 BOT_SESSION_PATH = os.path.join(DATA_DIR, "bot_session")
 
 os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
+try:
+    os.chmod(ADMIN_SESSIONS_DIR, 0o700)
+except OSError:
+    pass
 
 _log_file = os.path.join(DATA_DIR, "bot.log")
 logging.basicConfig(
@@ -103,75 +117,121 @@ DEFAULT_DATA = {
     "user_meta": {}
 }
 
+def _fresh_default_data():
+    return {
+        "admins": {},
+        "users": [],
+        "blocked": [],
+        "force_channels": [],
+        "admin_data": {},
+        "global_smtp_status": "on",
+        "send_today": 0,
+        "send_week": 0,
+        "today_date": "",
+        "week_number": "",
+        "bot_status": "on",
+        "user_lang": {},
+        "user_meta": {}
+    }
+
+
 def load_data():
-    if not os.path.exists(DATA_FILE):
-        data = DEFAULT_DATA.copy()
-        save_data(data)
-        return data
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except:
-        data = {}
-    if not isinstance(data, dict):
-        data = {}
-    for key, value in DEFAULT_DATA.items():
-        if key not in data:
-            if isinstance(value, list):
-                data[key] = []
-            elif isinstance(value, dict):
-                data[key] = {}
-            else:
-                data[key] = value
-    def safe_list(k):
-        if not isinstance(data.get(k), list):
-            data[k] = []
-    def safe_dict(k):
-        if not isinstance(data.get(k), dict):
-            data[k] = {}
-    safe_list("users")
-    safe_list("blocked")
-    safe_list("force_channels")
-    safe_dict("admin_data")
-    safe_dict("admins")
-    safe_dict("user_lang")
-    safe_dict("user_meta")
-    if not isinstance(data.get("send_today"), int):
-        data["send_today"] = 0
-    if not isinstance(data.get("send_week"), int):
-        data["send_week"] = 0
-    if not isinstance(data.get("today_date"), str):
-        data["today_date"] = ""
-    if not isinstance(data.get("week_number"), str):
-        data["week_number"] = ""
-    if data.get("global_smtp_status") not in ("on", "off"):
-        data["global_smtp_status"] = "on"
-    if data.get("bot_status") not in ("on", "off"):
-        data["bot_status"] = "on"
-    if "admins" in data:
+    """Load persistent state without silently erasing a corrupt data file."""
+    with DATA_LOCK:
+        if not os.path.exists(DATA_FILE):
+            data = _fresh_default_data()
+            save_data(data)
+            return data
+
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+            stamp = datetime.now(pytz.UTC).strftime("%Y%m%dT%H%M%SZ")
+            corrupt_path = os.path.join(DATA_DIR, f"data.corrupt-{stamp}.json")
+            try:
+                shutil.copy2(DATA_FILE, corrupt_path)
+                os.chmod(corrupt_path, 0o600)
+                logger.error("Invalid data.json preserved at %s", corrupt_path)
+            except Exception:
+                logger.exception("Could not preserve corrupt data.json")
+            logger.error("data.json load failed: %s", exc)
+            data = _fresh_default_data()
+
+        if not isinstance(data, dict):
+            data = _fresh_default_data()
+
+        defaults = _fresh_default_data()
+        for key, value in defaults.items():
+            if key not in data:
+                data[key] = value.copy() if isinstance(value, (list, dict)) else value
+
+        def safe_list(k):
+            if not isinstance(data.get(k), list):
+                data[k] = []
+
+        def safe_dict(k):
+            if not isinstance(data.get(k), dict):
+                data[k] = {}
+
+        safe_list("users")
+        safe_list("blocked")
+        safe_list("force_channels")
+        safe_dict("admin_data")
+        safe_dict("admins")
+        safe_dict("user_lang")
+        safe_dict("user_meta")
+
+        if not isinstance(data.get("send_today"), int):
+            data["send_today"] = 0
+        if not isinstance(data.get("send_week"), int):
+            data["send_week"] = 0
+        if not isinstance(data.get("today_date"), str):
+            data["today_date"] = ""
+        if not isinstance(data.get("week_number"), str):
+            data["week_number"] = ""
+        if data.get("global_smtp_status") not in ("on", "off"):
+            data["global_smtp_status"] = "on"
+        if data.get("bot_status") not in ("on", "off"):
+            data["bot_status"] = "on"
+
         for uid_str in list(data["admins"].keys()):
-            info = data["admins"][uid_str]
-            if isinstance(info.get("expires"), str):
-                info["expires"] = _normalize_tehran_datetime(datetime.fromisoformat(info["expires"]))
-            else:
-                info["expires"] = _normalize_tehran_datetime(info.get("expires"))
-            if isinstance(info.get("activated"), str):
-                info["activated"] = _normalize_tehran_datetime(datetime.fromisoformat(info["activated"]))
-            else:
-                info["activated"] = _normalize_tehran_datetime(info.get("activated"))
-    for uid_str in data.get("admins", {}):
-        data.setdefault("admin_data", {}).setdefault(uid_str, {
-            "smtp": [],
-            "active_senders": [],
-            "recipients": []
-        })
-    for oid in OWNER_IDS:
-        data.setdefault("admin_data", {}).setdefault(str(oid), {
-            "smtp": [],
-            "active_senders": [],
-            "recipients": []
-        })
-    return data
+            info = data["admins"].get(uid_str)
+            if not isinstance(info, dict):
+                info = {}
+                data["admins"][uid_str] = info
+            try:
+                raw_expires = info.get("expires")
+                info["expires"] = (
+                    _normalize_tehran_datetime(datetime.fromisoformat(raw_expires))
+                    if isinstance(raw_expires, str)
+                    else _normalize_tehran_datetime(raw_expires)
+                )
+            except Exception:
+                info["expires"] = None
+            try:
+                raw_activated = info.get("activated")
+                info["activated"] = (
+                    _normalize_tehran_datetime(datetime.fromisoformat(raw_activated))
+                    if isinstance(raw_activated, str)
+                    else _normalize_tehran_datetime(raw_activated)
+                )
+            except Exception:
+                info["activated"] = None
+
+        for uid_str in data.get("admins", {}):
+            data.setdefault("admin_data", {}).setdefault(uid_str, {
+                "smtp": [],
+                "active_senders": [],
+                "recipients": []
+            })
+        for oid in OWNER_IDS:
+            data.setdefault("admin_data", {}).setdefault(str(oid), {
+                "smtp": [],
+                "active_senders": [],
+                "recipients": []
+            })
+        return data
 
 def _normalize_tehran_datetime(value):
     if not isinstance(value, datetime):
@@ -198,25 +258,37 @@ def save_data(data):
     if "admins" in data_to_save:
         admins_copy = {}
         for uid_str, info in data_to_save["admins"].items():
-            info_copy = info.copy()
+            info_copy = info.copy() if isinstance(info, dict) else {}
             if isinstance(info_copy.get("expires"), datetime):
                 info_copy["expires"] = info_copy["expires"].isoformat()
             if isinstance(info_copy.get("activated"), datetime):
                 info_copy["activated"] = info_copy["activated"].isoformat()
             admins_copy[uid_str] = info_copy
         data_to_save["admins"] = admins_copy
+
     temp_file = DATA_FILE + ".tmp"
-    try:
-        with open(temp_file, "w", encoding="utf-8") as f:
-            json.dump(data_to_save, f, ensure_ascii=False, indent=4)
-        os.replace(temp_file, DATA_FILE)
-    except Exception:
-        logger.exception("Failed to persist bot data")
+    with DATA_LOCK:
         try:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(data_to_save, f, ensure_ascii=False, indent=2, sort_keys=True)
+                f.flush()
+                os.fsync(f.fileno())
+            try:
+                os.chmod(temp_file, 0o600)
+            except OSError:
+                pass
+            os.replace(temp_file, DATA_FILE)
+            try:
+                os.chmod(DATA_FILE, 0o600)
+            except OSError:
+                pass
         except Exception:
-            pass
+            logger.exception("Failed to persist bot data")
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except OSError:
+                pass
 
 def is_owner(user_id):
     return user_id in OWNER_IDS
@@ -270,11 +342,11 @@ def is_blocked(user_id):
     data = load_data()
     return str(user_id) in [str(x) for x in data.get("blocked", [])]
 
-def get_admin_data(user_id):
-    data = load_data()
-    admin_data = data.get("admin_data", {})
+def get_admin_data(user_id, data=None):
+    data = data if isinstance(data, dict) else load_data()
+    admin_data = data.setdefault("admin_data", {})
     uid = str(user_id)
-    if uid not in admin_data:
+    if uid not in admin_data or not isinstance(admin_data.get(uid), dict):
         admin_data[uid] = {"smtp": [], "active_senders": [], "recipients": []}
         save_data(data)
     return admin_data[uid]
@@ -475,52 +547,76 @@ def run_dashboard_coroutine(coro, timeout=30):
         raise
 
 
-async def test_smtp_connection(email, app_password):
+def _smtp_login_sync(email, app_password):
+    server = None
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
         server.ehlo()
         server.starttls()
         server.login(email, app_password)
-        server.quit()
         return True
-    except:
+    except Exception:
         return False
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+
+async def test_smtp_connection(email, app_password):
+    return await asyncio.to_thread(_smtp_login_sync, email, app_password)
 
 def send_email_sync(sender_email, password, to_email, subject, body):
+    server = None
     try:
         msg = MIMEText(body, "plain", "utf-8")
         msg["From"] = sender_email
         msg["To"] = to_email
         msg["Subject"] = subject
-        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
+        server.ehlo()
         server.starttls()
         server.login(sender_email, password)
         server.sendmail(sender_email, to_email, msg.as_string())
-        server.quit()
         return True, None
     except Exception as e:
         return False, str(e)
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 async def check_session_status(session_tuple):
     admin_id_str, filename = session_tuple
     path = os.path.join(ADMIN_SESSIONS_DIR, admin_id_str, filename)
+    client = None
     try:
-        with open(path, 'r') as f:
+        with open(path, "r", encoding="utf-8") as f:
             session_str = f.read().strip()
         if not session_str:
             return "❌ Empty"
+
         client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
         await client.connect()
         if not await client.is_user_authorized():
-            await client.disconnect()
             return "❌ Not authorized"
+
         me = await client.get_me()
-        await client.disconnect()
         return f"✅ Active (ID: {me.id})"
     except FileNotFoundError:
         return "❌ File not found"
     except Exception as e:
         return f"⚠️ {str(e)[:30]}"
+    finally:
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
 
 async def join_channel_with_approval(client, entity, session_file):
     try:
@@ -959,7 +1055,7 @@ async def callback_handler(event):
 
 async def email_callback(event, data, user_id, lang):
     data_db = load_data()
-    admin_data = get_admin_data(user_id)
+    admin_data = get_admin_data(user_id, data_db)
 
     if data == "em_smtp_add":
         USER_STATE[user_id] = {"section": "email", "flow": "smtp", "step": "waiting_email"}
@@ -1027,7 +1123,7 @@ async def email_callback(event, data, user_id, lang):
         for s in smtp_list:
             email = s.get("email", "")
             status = "🟢" if email in active else "🔴"
-            kb.append([Button.inline(f"{status} {email}", f"em_toggle_{email}" if email in active else "primary")])
+            kb.append([Button.inline(f"{status} {email}", f"em_toggle_{email}")])
         kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
         return
@@ -1044,7 +1140,7 @@ async def email_callback(event, data, user_id, lang):
         for s in admin_data.get("smtp", []):
             em = s.get("email", "")
             status = "🟢" if em in active else "🔴"
-            kb.append([Button.inline(f"{status} {em}", f"em_toggle_{em}" if em in active else "primary")])
+            kb.append([Button.inline(f"{status} {em}", f"em_toggle_{em}")])
         kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
         await event.answer("✅ وضعیت تغییر کرد" if lang == "fa" else "✅ Status changed")
@@ -1362,7 +1458,7 @@ async def message_handler(event):
 
 async def email_message_handler(event, state, text, user_id, lang):
     data_db = load_data()
-    admin_data = get_admin_data(user_id)
+    admin_data = get_admin_data(user_id, data_db)
     flow = state.get("flow")
     step = state.get("step")
 
@@ -1414,7 +1510,9 @@ async def email_message_handler(event, state, text, user_id, lang):
                 return
             active = admin_data.get("active_senders", [])
             sender = next((s for s in smtp_list if s["email"] in active), smtp_list[0])
-            ok, _ = send_email_sync(sender["email"], sender["password"], to, subject, body)
+            ok, _ = await asyncio.to_thread(
+                send_email_sync, sender["email"], sender["password"], to, subject, body
+            )
             if ok:
                 await event.reply("✅ ارسال شد" if lang == "fa" else "✅ Sent")
             else:
@@ -1446,7 +1544,9 @@ async def email_message_handler(event, state, text, user_id, lang):
             success = 0
             failed = 0
             for r in recips:
-                ok, _ = send_email_sync(sender["email"], sender["password"], r, subject, body)
+                ok, _ = await asyncio.to_thread(
+                    send_email_sync, sender["email"], sender["password"], r, subject, body
+                )
                 if ok:
                     success += 1
                 else:
@@ -1960,7 +2060,7 @@ def _session_count():
 
 
 class MonitorHandler(BaseHTTPRequestHandler):
-    server_version = "ReporterMonitor/1.0"
+    server_version = "ReporterMonitor/3.2"
 
     def _send_json(self, status_code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -2116,7 +2216,11 @@ class MonitorHandler(BaseHTTPRequestHandler):
                 self._send_json(401, {"error": "unauthorized"})
                 return
 
-            raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
+            content_length = int(self.headers.get("Content-Length", "0") or "0")
+            if content_length < 0 or content_length > 64 * 1024:
+                self._send_json(413, {"ok": False, "error": "request_too_large"})
+                return
+            raw = self.rfile.read(content_length)
             payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
 
             if parsed.path == "/api/control":
