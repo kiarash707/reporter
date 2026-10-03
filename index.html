@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reporter Control Dashboard</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0f18;--panel:#111927;--panel2:#0d1522;--line:#223049;--text:#edf4ff;--muted:#8fa2bd;--good:#41e38d;--bad:#ff6675;--warn:#ffc857;--accent:#5da8ff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% 0%,#16243a 0,#0a0f18 40%,#080c13 100%);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+.wrap{max-width:1280px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px}
+h1{margin:0;font-size:28px}
+.sub{color:var(--muted);margin-top:6px;font-size:14px}
+.actions{display:flex;gap:8px}
+button{border:1px solid var(--line);background:#172238;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+button:hover{background:#20304d}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.card{background:rgba(17,25,39,.9);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.label{font-size:12px;color:var(--muted);margin-bottom:8px}
+.value{font-size:25px;font-weight:700}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 11px;background:#152336;border:1px solid var(--line);font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 14px currentColor}
+.section{margin-top:16px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.section-title h2{font-size:17px;margin:0}
+.meta{color:var(--muted);font-size:12px}
+.logbox{height:430px;overflow:auto;background:#070b12;border:1px solid #1c2637;border-radius:12px;padding:14px;direction:ltr;text-align:left;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
+.notice{margin-top:12px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.wrap{padding:14px}header{display:block}.actions{margin-top:12px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div>
+<h1>Reporter Control Dashboard</h1>
+<div class="sub">مانیتور مستقل وضعیت، اتصال Telegram و لاگ‌های ربات</div>
+</div>
+<div class="actions">
+<button onclick="refreshAll()">↻ بروزرسانی</button>
+<button onclick="toggleAuto()" id="autoBtn">⏸ توقف بروزرسانی</button>
+</div>
+</header>
+
+<div class="card" style="margin-bottom:14px">
+<div class="label">وضعیت اصلی</div>
+<div id="overall" class="pill"><span class="dot"></span><span>در حال بررسی...</span></div>
+<div id="updated" class="notice">—</div>
+</div>
+
+<div class="grid">
+<div class="card"><div class="label">Uptime</div><div id="uptime" class="value">—</div></div>
+<div class="card"><div class="label">اتصال Telegram</div><div id="telegram" class="value">—</div></div>
+<div class="card"><div class="label">کاربران</div><div id="users" class="value">—</div></div>
+<div class="card"><div class="label">Admin فعال</div><div id="admins" class="value">—</div></div>
+<div class="card"><div class="label">Sessionها</div><div id="sessions" class="value">—</div></div>
+<div class="card"><div class="label">ارسال امروز</div><div id="today" class="value">—</div></div>
+<div class="card"><div class="label">ارسال این هفته</div><div id="week" class="value">—</div></div>
+<div class="card"><div class="label">Region</div><div id="region" class="value" style="font-size:18px">—</div></div>
+</div>
+
+<div class="section card">
+<div class="section-title">
+<h2>لاگ زنده</h2>
+<div id="logMeta" class="meta">آخرین 120 خط</div>
+</div>
+<div id="logs" class="logbox">در حال دریافت لاگ...</div>
+</div>
+
+<div class="notice">این داشبورد فقط وضعیت را می‌خواند. خراب شدن/خاموش شدن سرویس داشبورد نباید سرویس Telegram را متوقف کند.</div>
+</div>
+
+<script>
+let auto=true, statusTimer, logTimer;
+const $=id=>document.getElementById(id);
+
+function fmtUptime(sec){
+  sec=Math.max(0,Number(sec||0));
+  const d=Math.floor(sec/86400); sec%=86400;
+  const h=Math.floor(sec/3600); sec%=3600;
+  const m=Math.floor(sec/60); const s=sec%60;
+  return (d?d+"d ":"")+(h?String(h).padStart(2,"0")+":":"")+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+}
+
+function setOverall(ok, text){
+  $("overall").className="pill "+(ok?"good":"bad");
+  $("overall").innerHTML='<span class="dot"></span><span>'+text+'</span>';
+}
+
+async function loadStatus(){
+  try{
+    const r=await fetch("/api/status",{cache:"no-store"});
+    const j=await r.json();
+    if(j.ok && j.bot){
+      const b=j.bot;
+      const online=b.status==="online";
+      setOverall(online,"ربات "+(online?"آنلاین":"آفلاین"));
+      $("telegram").textContent=b.telegram_connected?"متصل":"قطع";
+      $("telegram").className="value "+(b.telegram_connected?"good":"bad");
+      $("uptime").textContent=fmtUptime(b.uptime_seconds);
+      $("users").textContent=(b.users??0).toLocaleString("fa-IR");
+      $("admins").textContent=((b.active_admins??0)+" / "+(b.admins??0));
+      $("sessions").textContent=(b.sessions??0).toLocaleString("fa-IR");
+      $("today").textContent=(b.send_today??0).toLocaleString("fa-IR");
+      $("week").textContent=(b.send_week??0).toLocaleString("fa-IR");
+      $("region").textContent=b.region||"—";
+      $("updated").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
+    }else{
+      setOverall(false,"ارتباط با ربات برقرار نیست");
+      $("telegram").textContent="نامشخص"; $("telegram").className="value bad";
+      $("updated").textContent="Dashboard سالم است، ولی Bot API پاسخ نمی‌دهد.";
+    }
+  }catch(e){
+    setOverall(false,"خطای داشبورد");
+    $("updated").textContent="خطا در دریافت وضعیت: "+e.message;
+  }
+}
+
+async function loadLogs(){
+  try{
+    const r=await fetch("/api/logs?lines=120",{cache:"no-store"});
+    const j=await r.json();
+    $("logs").textContent=(j.lines||[]).join("");
+    $("logs").scrollTop=$("logs").scrollHeight;
+    $("logMeta").textContent="آخرین "+(j.lines||[]).length+" خط • "+new Date().toLocaleTimeString("fa-IR");
+  }catch(e){
+    $("logs").textContent="[dashboard] "+e.message;
+  }
+}
+
+async function refreshAll(){await Promise.all([loadStatus(),loadLogs()]);}
+
+function startTimers(){
+  clearInterval(statusTimer); clearInterval(logTimer);
+  if(!auto)return;
+  statusTimer=setInterval(loadStatus,5000);
+  logTimer=setInterval(loadLogs,10000);
+}
+
+function toggleAuto(){
+  auto=!auto;
+  $("autoBtn").textContent=auto?"⏸ توقف بروزرسانی":"▶ ادامه بروزرسانی";
+  startTimers();
+}
+
+refreshAll();
+startTimers();
+</script>
+</body>
+</html>
