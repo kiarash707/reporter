@@ -4,13 +4,17 @@ Independent read-only monitoring dashboard for the Reporter Telegram bot.
 
 ## Features
 
-- Live bot status
-- Telegram connection status
-- Uptime
-- Users/admins/session counts
-- Daily/weekly send counters
-- Live runtime logs
-- Automatic refresh
+- مرکز عملیات زنده با وضعیت Telegram، پردازش پیام و زمان فعالیت
+- تشخیص Event Handler و شمارش /start، Callback و پیام خصوصی
+- Diagnostics داخلی برای Telegram، Handlers، Processing و Volume/Storage
+- مدیریت کاربران: مشاهده، جستجو، بلاک/آنبلاک و ارسال پیام
+- مدیریت مدیران و تاریخ انقضا
+- مدیریت کانال‌های اجباری
+- کنسول لاگ زنده با فیلتر سطح و ترجمه رخدادهای رایج
+- کنترل عملیاتی: فعال‌سازی، توقف پاسخ‌گویی و Restart
+- رابط RTL واکنش‌گرا با Glass UI، پس‌زمینه ذرات، انیمیشن، Pulse و Scan
+- بدون وابستگی به CDN یا سرویس خارجی در رابط کاربری
+- بروزرسانی خودکار وضعیت و لاگ‌ها
 
 ## Environment variables
 
