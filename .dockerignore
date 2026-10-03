@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+__pycache__/
+*.py[cod]
+*.session
+*.session-journal
+bot.log
+data.json
+admin_sessions/
+data/
+.venv/
+venv/
