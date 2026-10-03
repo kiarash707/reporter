@@ -169,7 +169,8 @@ async function loadStatus(){
     if(j.ok && j.bot){
       const b=j.bot;
       const online=b.status==="online";
-      setOverall(online,"ربات "+(online?"آنلاین":"آفلاین"));
+      const paused=b.processing_enabled===false || b.bot_status==="off";
+      setOverall(online,(online?(paused?"ربات متوقف/در حالت مکث":"ربات آنلاین"):"ربات آفلاین"));
       $("telegram").textContent=b.telegram_connected?"متصل":"قطع";
       $("telegram").className="value "+(b.telegram_connected?"good":"bad");
       $("uptime").textContent=fmtUptime(b.uptime_seconds);
@@ -180,7 +181,7 @@ async function loadStatus(){
       $("week").textContent=(b.send_week??0).toLocaleString("fa-IR");
       $("region").textContent=b.region||"—";
       $("updated").textContent="آخرین بررسی: "+new Date().toLocaleTimeString("fa-IR");
-      $("explain").textContent=explainStatus(b);
+      $("explain").textContent=paused?"سرویس ربات روشن است، اما پاسخ‌گویی پیام‌ها از داشبورد متوقف شده است.":explainStatus(b);
     }else{
       setOverall(false,"ارتباط با ربات برقرار نیست");
       $("telegram").textContent="نامشخص"; $("telegram").className="value bad";
