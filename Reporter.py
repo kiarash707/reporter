@@ -3,6 +3,7 @@ import asyncio
 import smtplib
 import json
 import logging
+import platform
 import hmac
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -72,6 +73,7 @@ LAST_EVENT_USER_ID = None
 LAST_HANDLER_ERROR = None
 EVENT_COUNTS = {"start": 0, "callback": 0, "message": 0}
 HANDLER_ERRORS = {"start": 0, "callback": 0, "message": 0}
+APP_VERSION = os.getenv("REPORTER_VERSION", "3.1.0")
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -355,6 +357,9 @@ def diagnostics_snapshot():
         "data_dir": DATA_DIR,
         "data_file_exists": os.path.exists(DATA_FILE),
         "data_file_writable": os.access(DATA_DIR, os.W_OK),
+        "data_file_size_bytes": os.path.getsize(DATA_FILE) if os.path.exists(DATA_FILE) else 0,
+        "log_file_exists": os.path.exists(_log_file),
+        "log_file_size_bytes": os.path.getsize(_log_file) if os.path.exists(_log_file) else 0,
         "admin_sessions_dir_exists": os.path.isdir(ADMIN_SESSIONS_DIR),
         "admin_sessions_writable": os.access(ADMIN_SESSIONS_DIR, os.W_OK),
     }
@@ -363,7 +368,16 @@ def diagnostics_snapshot():
         bot_connected = bool(bot_instance.is_connected())
     except Exception:
         pass
+    uptime_seconds = max(0, int((datetime.now(pytz.UTC) - BOT_STARTED_AT).total_seconds())) if BOT_STARTED_AT else 0
+    event_total = sum(int(v or 0) for v in EVENT_COUNTS.values())
+    event_rate_per_minute = round(event_total / max(uptime_seconds / 60.0, 1.0), 2) if event_total else 0.0
+    last_event_age_seconds = None
+    if LAST_EVENT_AT:
+        last_event_age_seconds = max(0, int((datetime.now(pytz.UTC) - LAST_EVENT_AT).total_seconds()))
     return {
+        "version": APP_VERSION,
+        "python_version": platform.python_version(),
+        "telethon_version": getattr(__import__("telethon"), "__version__", "unknown"),
         "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter"),
         "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
         "region": os.getenv("RAILWAY_REGION", ""),
@@ -374,12 +388,16 @@ def diagnostics_snapshot():
         "processing_enabled": BOT_PROCESSING_ENABLED,
         "handlers_registered": HANDLERS_REGISTERED,
         "last_event_at": LAST_EVENT_AT.isoformat() if LAST_EVENT_AT else None,
+        "last_event_age_seconds": last_event_age_seconds,
         "last_event_type": LAST_EVENT_TYPE,
         "last_event_user_id": LAST_EVENT_USER_ID,
         "event_counts": dict(EVENT_COUNTS),
+        "event_total": event_total,
+        "event_rate_per_minute": event_rate_per_minute,
         "handler_errors": dict(HANDLER_ERRORS),
+        "handler_error_total": sum(int(v or 0) for v in HANDLER_ERRORS.values()),
         "last_handler_error": LAST_HANDLER_ERROR,
-        "uptime_seconds": max(0, int((datetime.now(pytz.UTC) - BOT_STARTED_AT).total_seconds())) if BOT_STARTED_AT else 0,
+        "uptime_seconds": uptime_seconds,
         "sessions": _session_count(),
         "storage": storage,
     }
@@ -2003,8 +2021,17 @@ class MonitorHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
+                event_total = sum(int(v or 0) for v in EVENT_COUNTS.values())
+                event_rate_per_minute = round(event_total / max(uptime_seconds / 60.0, 1.0), 2) if event_total else 0.0
+                last_event_age_seconds = None
+                if LAST_EVENT_AT:
+                    last_event_age_seconds = max(0, int((datetime.now(pytz.UTC) - LAST_EVENT_AT).total_seconds()))
+
                 self._send_json(200, {
                     "status": "online",
+                    "version": APP_VERSION,
+                    "python_version": platform.python_version(),
+                    "telethon_version": getattr(__import__("telethon"), "__version__", "unknown"),
                     "telegram_connected": telegram_connected,
                     "started_at": BOT_STARTED_AT.isoformat() if BOT_STARTED_AT else None,
                     "bot_username": BOT_USERNAME,
@@ -2013,7 +2040,11 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "last_event_type": LAST_EVENT_TYPE,
                     "last_event_user_id": LAST_EVENT_USER_ID,
                     "event_counts": dict(EVENT_COUNTS),
+                    "event_total": event_total,
+                    "event_rate_per_minute": event_rate_per_minute,
+                    "last_event_age_seconds": last_event_age_seconds,
                     "handler_errors": dict(HANDLER_ERRORS),
+                    "handler_error_total": sum(int(v or 0) for v in HANDLER_ERRORS.values()),
                     "last_handler_error": LAST_HANDLER_ERROR,
                     "uptime_seconds": uptime_seconds,
                     "users": len(data.get("users", [])),
