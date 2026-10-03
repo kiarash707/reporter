@@ -356,7 +356,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def setup(self):
         super().setup()
-        self.connection.settimeout(180 if self.path.startswith('/api/backup/') else 20)
+        self.connection.settimeout(20)
 
     def do_HEAD(self):
         parsed = urlparse(self.path)
