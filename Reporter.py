@@ -8,6 +8,9 @@ import hmac
 import threading
 import re
 import shutil
+import hashlib
+import tempfile
+import zipfile
 from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -57,6 +60,10 @@ BOT_SESSION_PATH = os.path.join(DATA_DIR, "bot_session")
 
 os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
 try:
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    os.makedirs(RESTORE_DIR, exist_ok=True)
+    os.chmod(BACKUP_DIR, 0o700)
+    os.chmod(RESTORE_DIR, 0o700)
     os.chmod(ADMIN_SESSIONS_DIR, 0o700)
 except OSError:
     pass
@@ -94,7 +101,17 @@ LAST_EVENT_USER_ID = None
 LAST_HANDLER_ERROR = None
 EVENT_COUNTS = {"start": 0, "callback": 0, "message": 0}
 HANDLER_ERRORS = {"start": 0, "callback": 0, "message": 0}
-APP_VERSION = os.getenv("REPORTER_VERSION", "3.1.0")
+APP_VERSION = os.getenv("REPORTER_VERSION", "4.1.0")
+BACKUP_DIR = os.path.join(DATA_DIR, "backups")
+RESTORE_DIR = os.path.join(DATA_DIR, "restore")
+RESTORE_SOURCE_DIR = os.path.join(RESTORE_DIR, "source")
+RESTORE_ACTIVATION_FILE = os.path.join(RESTORE_DIR, "activation.json")
+RESTORE_MANIFEST_FILE = os.path.join(RESTORE_DIR, "manifest.json")
+BACKUP_FORMAT_VERSION = 1
+BACKUP_MAX_BYTES = int(os.getenv("BACKUP_MAX_BYTES", str(250 * 1024 * 1024)))
+BACKUP_MAX_UNCOMPRESSED = int(os.getenv("BACKUP_MAX_UNCOMPRESSED", str(350 * 1024 * 1024)))
+BACKUP_MAX_FILES = int(os.getenv("BACKUP_MAX_FILES", "5000"))
+BACKUP_RETENTION = max(1, min(10, int(os.getenv("BACKUP_RETENTION", "3"))))
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -2039,6 +2056,322 @@ async def execute_report_operation(event, state, user_id, lang):
     await event.reply(result)
 
 
+
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _backup_source_files():
+    files = []
+    for name in ("Reporter.py", "requirements.txt", "Dockerfile", "bootstrap.py", ".dockerignore", "railway.toml", "README.md"):
+        path = os.path.join(os.getcwd(), name)
+        if os.path.isfile(path):
+            files.append((f"source/{name}", path))
+    return files
+
+
+def _backup_data_files():
+    files = []
+    if not os.path.isdir(DATA_DIR):
+        return files
+    for root, dirs, names in os.walk(DATA_DIR):
+        dirs[:] = [d for d in dirs if d not in {"backups", "restore"}]
+        for name in names:
+            if name.endswith(".tmp") or ".corrupt-" in name:
+                continue
+            path = os.path.join(root, name)
+            if os.path.isfile(path):
+                rel = os.path.relpath(path, DATA_DIR).replace(os.sep, "/")
+                files.append((f"data/{rel}", path))
+    return sorted(files)
+
+
+def _prune_backup_history():
+    try:
+        entries = []
+        for name in os.listdir(BACKUP_DIR):
+            if not name.startswith("reporter-backup-") or not name.endswith(".zip"):
+                continue
+            path = os.path.join(BACKUP_DIR, name)
+            if os.path.isfile(path):
+                entries.append((os.path.getmtime(path), os.path.getsize(path), path))
+        entries.sort(reverse=True)
+        total = 0
+        keep = set()
+        for idx, (_, size, path) in enumerate(entries):
+            if idx < BACKUP_RETENTION and total + size <= 200 * 1024 * 1024:
+                keep.add(path)
+                total += size
+        for _, _, path in entries:
+            if path not in keep:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+    except Exception:
+        logger.exception("Backup pruning failed")
+
+
+def _create_backup_file(reason="manual"):
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    stamp = datetime.now(pytz.UTC).strftime("%Y%m%dT%H%M%SZ")
+    safe_reason = re.sub(r"[^A-Za-z0-9_-]+", "-", str(reason or "manual"))[:32] or "manual"
+    final_path = os.path.join(BACKUP_DIR, f"reporter-backup-{stamp}-{safe_reason}.zip")
+    temp_path = final_path + ".tmp"
+
+    with DATA_LOCK:
+        specs = _backup_data_files() + _backup_source_files()
+        if len(specs) > BACKUP_MAX_FILES:
+            raise RuntimeError("backup file count exceeds limit")
+        manifest_files = []
+        total_size = 0
+        for arcname, path in specs:
+            size = os.path.getsize(path)
+            total_size += size
+            if total_size > BACKUP_MAX_UNCOMPRESSED:
+                raise RuntimeError("backup size exceeds limit")
+            manifest_files.append({"path": arcname, "size": size, "sha256": _sha256_file(path)})
+
+        manifest = {
+            "product": "Reporter",
+            "format_version": BACKUP_FORMAT_VERSION,
+            "created_at": datetime.now(pytz.UTC).isoformat(),
+            "reason": safe_reason,
+            "app_version": APP_VERSION,
+            "python_version": platform.python_version(),
+            "telethon_version": getattr(__import__("telethon"), "__version__", "unknown"),
+            "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter"),
+            "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
+            "region": os.getenv("RAILWAY_REGION", ""),
+            "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
+            "source_sha256": _sha256_file(os.path.join(os.getcwd(), "Reporter.py")) if os.path.isfile(os.path.join(os.getcwd(), "Reporter.py")) else None,
+            "requirements_sha256": _sha256_file(os.path.join(os.getcwd(), "requirements.txt")) if os.path.isfile(os.path.join(os.getcwd(), "requirements.txt")) else None,
+            "file_count": len(manifest_files),
+            "files": manifest_files,
+        }
+
+        with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+            for arcname, path in specs:
+                archive.write(path, arcname)
+            archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
+
+    os.replace(temp_path, final_path)
+    try:
+        os.chmod(final_path, 0o600)
+    except OSError:
+        pass
+    _prune_backup_history()
+    logger.info("Backup created: %s", os.path.basename(final_path))
+    return final_path, manifest
+
+
+def _backup_history():
+    rows = []
+    try:
+        for name in os.listdir(BACKUP_DIR):
+            if name.startswith("reporter-backup-") and name.endswith(".zip"):
+                path = os.path.join(BACKUP_DIR, name)
+                if os.path.isfile(path):
+                    rows.append({
+                        "name": name,
+                        "size_bytes": os.path.getsize(path),
+                        "created_at": datetime.fromtimestamp(os.path.getmtime(path), tz=pytz.UTC).isoformat(),
+                    })
+    except Exception:
+        logger.exception("Backup history read failed")
+    rows.sort(key=lambda x: x["created_at"], reverse=True)
+    return rows
+
+
+def _backup_status():
+    activation = {}
+    try:
+        if os.path.isfile(RESTORE_ACTIVATION_FILE):
+            with open(RESTORE_ACTIVATION_FILE, "r", encoding="utf-8") as fh:
+                activation = json.load(fh)
+    except Exception:
+        activation = {}
+    history = _backup_history()
+    return {
+        "format_version": BACKUP_FORMAT_VERSION,
+        "backup_count": len(history),
+        "latest_backup": history[0] if history else None,
+        "restore_source_active": activation.get("active") is True,
+        "restore_source_sha256": activation.get("source_sha256"),
+        "restore_requirements_sha256": activation.get("requirements_sha256"),
+        "restore_manifest_created_at": activation.get("backup_created_at"),
+    }
+
+
+def _validate_backup_zip(zip_path, stage_dir):
+    try:
+        with zipfile.ZipFile(zip_path, "r") as archive:
+            infos = archive.infolist()
+            if len(infos) > BACKUP_MAX_FILES + 1:
+                raise ValueError("too many archive entries")
+            try:
+                manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+            except KeyError as exc:
+                raise ValueError("manifest.json is missing") from exc
+            if manifest.get("product") != "Reporter" or manifest.get("format_version") != BACKUP_FORMAT_VERSION:
+                raise ValueError("unsupported backup format")
+
+            expected = {}
+            for item in manifest.get("files", []):
+                if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                    raise ValueError("invalid manifest file entry")
+                expected[item["path"]] = item
+            if len(expected) != int(manifest.get("file_count", -1)):
+                raise ValueError("manifest file count mismatch")
+
+            actual_names = set()
+            total = 0
+            for info in infos:
+                name = info.filename.replace("\\", "/")
+                if name == "manifest.json":
+                    continue
+                normalized = os.path.normpath(name).replace(os.sep, "/")
+                if name.startswith("/") or normalized in (".", "..") or normalized.startswith("../") or normalized != name:
+                    raise ValueError("unsafe archive path")
+                if not name.startswith(("data/", "source/")):
+                    raise ValueError("unsupported archive path")
+                if info.is_dir():
+                    continue
+                mode = (info.external_attr >> 16) & 0o170000
+                if mode == 0o120000:
+                    raise ValueError("symlinks are not allowed")
+                total += int(info.file_size)
+                if total > BACKUP_MAX_UNCOMPRESSED:
+                    raise ValueError("uncompressed backup too large")
+                item = expected.get(name)
+                if not item or int(item.get("size", -1)) != int(info.file_size):
+                    raise ValueError(f"manifest mismatch: {name}")
+
+                target = os.path.abspath(os.path.join(stage_dir, name))
+                if os.path.commonpath([os.path.abspath(stage_dir), target]) != os.path.abspath(stage_dir):
+                    raise ValueError("unsafe extraction target")
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                digest = hashlib.sha256()
+                with archive.open(info, "r") as src, open(target, "wb") as dst:
+                    for chunk in iter(lambda: src.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                        dst.write(chunk)
+                if digest.hexdigest() != item.get("sha256"):
+                    raise ValueError(f"checksum mismatch: {name}")
+                actual_names.add(name)
+
+            if actual_names != set(expected):
+                raise ValueError("archive contents do not match manifest")
+            source = os.path.join(stage_dir, "source", "Reporter.py")
+            requirements = os.path.join(stage_dir, "source", "requirements.txt")
+            if not os.path.isfile(source) or not os.path.isfile(requirements):
+                raise ValueError("Reporter.py or requirements.txt missing")
+            if manifest.get("source_sha256") != _sha256_file(source):
+                raise ValueError("source integrity mismatch")
+            if manifest.get("requirements_sha256") != _sha256_file(requirements):
+                raise ValueError("requirements integrity mismatch")
+            return manifest
+    except zipfile.BadZipFile as exc:
+        raise ValueError("uploaded file is not a valid ZIP") from exc
+
+
+def _clear_runtime_data_for_restore():
+    for name in os.listdir(DATA_DIR):
+        if name in {"backups", "restore"}:
+            continue
+        path = os.path.join(DATA_DIR, name)
+        try:
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except FileNotFoundError:
+            pass
+
+
+def _activate_restored_source(manifest, stage_dir):
+    os.makedirs(RESTORE_SOURCE_DIR, exist_ok=True)
+    shutil.copy2(os.path.join(stage_dir, "source", "Reporter.py"), os.path.join(RESTORE_SOURCE_DIR, "Reporter.py"))
+    shutil.copy2(os.path.join(stage_dir, "source", "requirements.txt"), os.path.join(RESTORE_SOURCE_DIR, "requirements.txt"))
+    shutil.copy2(os.path.join(stage_dir, "manifest.json"), RESTORE_MANIFEST_FILE) if os.path.isfile(os.path.join(stage_dir, "manifest.json")) else None
+    activation = {
+        "active": True,
+        "activated_at": datetime.now(pytz.UTC).isoformat(),
+        "source_sha256": manifest.get("source_sha256"),
+        "requirements_sha256": manifest.get("requirements_sha256"),
+        "backup_created_at": manifest.get("created_at"),
+    }
+    tmp = RESTORE_ACTIVATION_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(activation, fh, ensure_ascii=False, indent=2)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, RESTORE_ACTIVATION_FILE)
+
+
+def _deactivate_restored_source():
+    try:
+        if os.path.isfile(RESTORE_ACTIVATION_FILE):
+            os.remove(RESTORE_ACTIVATION_FILE)
+        return True
+    except OSError:
+        logger.exception("Could not deactivate restored source")
+        return False
+
+
+def _restore_backup_file(zip_path, activate_source=True, dry_run=False):
+    size = os.path.getsize(zip_path)
+    if size <= 0 or size > BACKUP_MAX_BYTES:
+        raise ValueError("backup upload is too large or empty")
+    stage_dir = tempfile.mkdtemp(prefix="reporter-restore-", dir=DATA_DIR)
+    try:
+        manifest = _validate_backup_zip(zip_path, stage_dir)
+        if dry_run:
+            return {"ok": True, "dry_run": True, "manifest": manifest, "restart_requested": False}
+
+        safety_backup, _ = _create_backup_file("pre-restore")
+        global BOT_PROCESSING_ENABLED
+        BOT_PROCESSING_ENABLED = False
+        data = load_data()
+        data["bot_status"] = "off"
+        save_data(data)
+
+        with DATA_LOCK:
+            _clear_runtime_data_for_restore()
+            staged_data = os.path.join(stage_dir, "data")
+            if os.path.isdir(staged_data):
+                for item in os.listdir(staged_data):
+                    src = os.path.join(staged_data, item)
+                    dst = os.path.join(DATA_DIR, item)
+                    if os.path.isdir(src):
+                        shutil.copytree(src, dst, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(src, dst)
+            if activate_source:
+                _activate_restored_source(manifest, stage_dir)
+            else:
+                _deactivate_restored_source()
+        clear_user_cache()
+        logger.warning("Backup restore completed; source_activation=%s; safety_backup=%s", activate_source, os.path.basename(safety_backup))
+        return {
+            "ok": True,
+            "dry_run": False,
+            "manifest": manifest,
+            "safety_backup": os.path.basename(safety_backup),
+            "restart_requested": True,
+            "source_activation_requested": bool(activate_source),
+        }
+    finally:
+        try:
+            shutil.rmtree(stage_dir)
+        except Exception:
+            pass
+
+
 def _tail_log_file(lines=100):
     try:
         lines = max(1, min(int(lines), 300))
@@ -2067,7 +2400,7 @@ def _session_count():
 
 
 class MonitorHandler(BaseHTTPRequestHandler):
-    server_version = "ReporterMonitor/3.2"
+    server_version = "ReporterMonitor/4.1"
 
     def _send_json(self, status_code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -2169,7 +2502,8 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
                     "region": os.getenv("RAILWAY_REGION", ""),
                     "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
-                    "monitor_port": MONITOR_PORT
+                    "monitor_port": MONITOR_PORT,
+                    "backup": _backup_status()
                 })
                 return
 
@@ -2204,6 +2538,55 @@ class MonitorHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"lines": _tail_log_file(lines)})
                 return
 
+            if parsed.path == "/api/backup/info":
+                self._send_json(200, _backup_status())
+                return
+
+            if parsed.path == "/api/backup/history":
+                self._send_json(200, {"backups": _backup_history()})
+                return
+
+            if parsed.path == "/api/backup/download":
+                backup_path, _ = _create_backup_file("manual")
+                size = os.path.getsize(backup_path)
+                if size > BACKUP_MAX_BYTES:
+                    os.remove(backup_path)
+                    raise RuntimeError("generated backup exceeded limit")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Disposition", f'attachment; filename="{os.path.basename(backup_path)}"')
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Length", str(size))
+                self.end_headers()
+                with open(backup_path, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                        self.wfile.write(chunk)
+                return
+
+            if parsed.path == "/api/backup/download-existing":
+                params = parse_qs(parsed.query)
+                name = params.get("name", [""])[0]
+                if not re.fullmatch(r"reporter-backup-[A-Za-z0-9_-]+\.zip", name):
+                    self._send_json(400, {"ok": False, "error": "backup_name_invalid"})
+                    return
+                path = os.path.abspath(os.path.join(BACKUP_DIR, name))
+                if os.path.commonpath([os.path.abspath(BACKUP_DIR), path]) != os.path.abspath(BACKUP_DIR) or not os.path.isfile(path):
+                    self._send_json(404, {"ok": False, "error": "backup_not_found"})
+                    return
+                size = os.path.getsize(path)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Length", str(size))
+                self.end_headers()
+                with open(path, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                        self.wfile.write(chunk)
+                return
+
             self._send_json(404, {"error": "not_found"})
         except Exception:
             logger.exception("Monitor HTTP error")
@@ -2223,7 +2606,64 @@ class MonitorHandler(BaseHTTPRequestHandler):
                 self._send_json(401, {"error": "unauthorized"})
                 return
 
-            content_length = int(self.headers.get("Content-Length", "0") or "0")
+            try:
+                content_length = int(self.headers.get("Content-Length", "0") or "0")
+            except ValueError:
+                content_length = 0
+
+            if parsed.path == "/api/backup/restore":
+                if content_length <= 0 or content_length > BACKUP_MAX_BYTES:
+                    self._send_json(413, {"ok": False, "error": "backup_upload_too_large"})
+                    return
+                content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                if content_type not in {"application/zip", "application/octet-stream"}:
+                    self._send_json(415, {"ok": False, "error": "content_type_must_be_zip"})
+                    return
+
+                params = parse_qs(parsed.query)
+                activate_source = params.get("activate_source", ["1"])[0] == "1"
+                dry_run = params.get("dry_run", ["0"])[0] == "1"
+                fd, temp_path = tempfile.mkstemp(prefix="reporter-upload-", suffix=".zip", dir=DATA_DIR)
+                os.close(fd)
+                try:
+                    remaining = content_length
+                    with open(temp_path, "wb") as fh:
+                        while remaining:
+                            chunk = self.rfile.read(min(1024 * 1024, remaining))
+                            if not chunk:
+                                raise ConnectionError("upload ended early")
+                            fh.write(chunk)
+                            remaining -= len(chunk)
+                    result = _restore_backup_file(temp_path, activate_source=activate_source, dry_run=dry_run)
+                    self._send_json(200, result)
+                    if result.get("restart_requested"):
+                        def delayed_exit():
+                            import time as _time
+                            _time.sleep(0.8)
+                            os._exit(1)
+                        threading.Thread(target=delayed_exit, daemon=True).start()
+                    return
+                finally:
+                    try:
+                        os.remove(temp_path)
+                    except OSError:
+                        pass
+
+            if parsed.path == "/api/backup/revert-source":
+                _deactivate_restored_source()
+                self._send_json(200, {"ok": True, "message": "نسخه سورس مستقرشده فعال شد", "restart_requested": True})
+                def delayed_exit():
+                    import time as _time
+                    _time.sleep(0.8)
+                    os._exit(1)
+                threading.Thread(target=delayed_exit, daemon=True).start()
+                return
+
+            if content_length < 0 or content_length > 64 * 1024:
+                self._send_json(413, {"ok": False, "error": "request_too_large"})
+                return
+            raw = self.rfile.read(content_length)
+            payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
             if content_length < 0 or content_length > 64 * 1024:
                 self._send_json(413, {"ok": False, "error": "request_too_large"})
                 return
