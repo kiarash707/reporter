@@ -490,34 +490,34 @@ def main_menu_keyboard(user_id):
         return None
     kb = [
         [
-            Button.inline("📧 ایمیل ریپورتر" if lang == "fa" else "📧 Email Reporter", "menu_email", style="primary"),
-            Button.inline("🚫 تلگرام ریپورتر" if lang == "fa" else "🚫 Telegram Reporter", "menu_telegram", style="primary")
+            Button.inline("📧 ایمیل ریپورتر" if lang == "fa" else "📧 Email Reporter", "menu_email"),
+            Button.inline("🚫 تلگرام ریپورتر" if lang == "fa" else "🚫 Telegram Reporter", "menu_telegram")
         ],
         [
-            Button.inline("🌐 تغییر زبان" if lang == "fa" else "🌐 Change Language", "change_lang", style="success"),
+            Button.inline("🌐 تغییر زبان" if lang == "fa" else "🌐 Change Language", "change_lang"),
             Button.url("📞 پشتیبانی / Support", "https://t.me/shikh4")
         ]
     ]
     if is_owner(user_id):
-        kb.append([Button.inline("👑 پنل مالک" if lang == "fa" else "👑 Owner Panel", "owner_panel", style="danger")])
-        kb.append([Button.inline("➕ افزودن ادمین" if lang == "fa" else "➕ Add Admin", "add_admin", style="success")])
+        kb.append([Button.inline("👑 پنل مالک" if lang == "fa" else "👑 Owner Panel", "owner_panel")])
+        kb.append([Button.inline("➕ افزودن ادمین" if lang == "fa" else "➕ Add Admin", "add_admin")])
     return kb
 
 def owner_panel_keyboard(user_id):
     lang = get_user_lang(user_id) or "fa"
     return [
         [
-            Button.inline("📢 پیام همگانی" if lang == "fa" else "📢 Broadcast", "em_broadcast", style="primary"),
-            Button.inline("👤 پیام به کاربر" if lang == "fa" else "👤 Message User", "em_msg_user", style="primary")
+            Button.inline("📢 پیام همگانی" if lang == "fa" else "📢 Broadcast", "em_broadcast"),
+            Button.inline("👤 پیام به کاربر" if lang == "fa" else "👤 Message User", "em_msg_user")
         ],
         [
-            Button.inline("🚫 بلاک کاربر" if lang == "fa" else "🚫 Block User", "em_block", style="danger"),
-            Button.inline("✅ آنبلاک کاربر" if lang == "fa" else "✅ Unblock User", "em_unblock", style="success")
+            Button.inline("🚫 بلاک کاربر" if lang == "fa" else "🚫 Block User", "em_block"),
+            Button.inline("✅ آنبلاک کاربر" if lang == "fa" else "✅ Unblock User", "em_unblock")
         ],
         [
-            Button.inline("📢 مدیریت کانال اجباری" if lang == "fa" else "📢 Manage Force Channel", "em_force_channel", style="primary")
+            Button.inline("📢 مدیریت کانال اجباری" if lang == "fa" else "📢 Manage Force Channel", "em_force_channel")
         ],
-        [Button.inline("🔙 بازگشت به منوی اصلی" if lang == "fa" else "🔙 Back to Main Menu", "back_main", style="primary")]
+        [Button.inline("🔙 بازگشت به منوی اصلی" if lang == "fa" else "🔙 Back to Main Menu", "back_main")]
     ]
 
 def email_menu_keyboard(user_id):
@@ -527,79 +527,79 @@ def email_menu_keyboard(user_id):
     if lang == "fa":
         if is_own:
             kb.append([
-                Button.inline("➕ افزودن SMTP", "em_smtp_add", style="primary"),
-                Button.inline("📋 لیست SMTP", "em_smtp_list", style="primary")
+                Button.inline("➕ افزودن SMTP", "em_smtp_add"),
+                Button.inline("📋 لیست SMTP", "em_smtp_list")
             ])
             kb.append([
-                Button.inline("🟢 فعال‌سازی ارسال‌کننده", "em_activate", style="success"),
-                Button.inline("📧 ارسال تکی", "em_single_send", style="primary")
+                Button.inline("🟢 فعال‌سازی ارسال‌کننده", "em_activate"),
+                Button.inline("📧 ارسال تکی", "em_single_send")
             ])
         else:
             kb.append([
-                Button.inline("➕ افزودن SMTP", "em_smtp_add", style="primary"),
-                Button.inline("📋 لیست SMTP", "em_smtp_list", style="primary")
+                Button.inline("➕ افزودن SMTP", "em_smtp_add"),
+                Button.inline("📋 لیست SMTP", "em_smtp_list")
             ])
             kb.append([
-                Button.inline("🟢 فعال‌سازی ارسال‌کننده", "em_activate", style="success"),
-                Button.inline("📧 ارسال تکی", "em_single_send", style="primary")
+                Button.inline("🟢 فعال‌سازی ارسال‌کننده", "em_activate"),
+                Button.inline("📧 ارسال تکی", "em_single_send")
             ])
         kb.append([
-            Button.inline("📨 ارسال گروهی", "em_bulk_send", style="success"),
-            Button.inline("👥 لیست گیرنده‌ها", "em_recips", style="primary")
+            Button.inline("📨 ارسال گروهی", "em_bulk_send"),
+            Button.inline("👥 لیست گیرنده‌ها", "em_recips")
         ])
         kb.append([
-            Button.inline("➕ افزودن گیرنده", "em_add_recip", style="primary"),
-            Button.inline("🗑 پاک‌کردن گیرنده‌ها", "em_clear_recip", style="danger")
+            Button.inline("➕ افزودن گیرنده", "em_add_recip"),
+            Button.inline("🗑 پاک‌کردن گیرنده‌ها", "em_clear_recip")
         ])
         kb.append([
-            Button.inline("📊 آمار زنده", "em_stats", style="primary"),
-            Button.inline("دریافت نمایندگی", "em_agency", style="success")
+            Button.inline("📊 آمار زنده", "em_stats"),
+            Button.inline("دریافت نمایندگی", "em_agency")
         ])
-        kb.append([Button.inline("🔙 بازگشت به منوی اصلی", "back_main", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت به منوی اصلی", "back_main")])
     else:
         if is_own:
             kb.append([
-                Button.inline("➕ ADD SMTP", "em_smtp_add", style="primary"),
-                Button.inline("📋 SMTP LIST", "em_smtp_list", style="primary")
+                Button.inline("➕ ADD SMTP", "em_smtp_add"),
+                Button.inline("📋 SMTP LIST", "em_smtp_list")
             ])
             kb.append([
-                Button.inline("🟢 ACTIVATE SENDER", "em_activate", style="success"),
-                Button.inline("📧 SEND SINGLE", "em_single_send", style="primary")
+                Button.inline("🟢 ACTIVATE SENDER", "em_activate"),
+                Button.inline("📧 SEND SINGLE", "em_single_send")
             ])
         else:
             kb.append([
-                Button.inline("➕ ADD SMTP", "em_smtp_add", style="primary"),
-                Button.inline("📋 SMTP LIST", "em_smtp_list", style="primary")
+                Button.inline("➕ ADD SMTP", "em_smtp_add"),
+                Button.inline("📋 SMTP LIST", "em_smtp_list")
             ])
             kb.append([
-                Button.inline("🟢 ACTIVATE SENDER", "em_activate", style="success"),
-                Button.inline("📧 SEND SINGLE", "em_single_send", style="primary")
+                Button.inline("🟢 ACTIVATE SENDER", "em_activate"),
+                Button.inline("📧 SEND SINGLE", "em_single_send")
             ])
         kb.append([
-            Button.inline("📨 BULK SEND", "em_bulk_send", style="success"),
-            Button.inline("👥 RECIPIENTS LIST", "em_recips", style="primary")
+            Button.inline("📨 BULK SEND", "em_bulk_send"),
+            Button.inline("👥 RECIPIENTS LIST", "em_recips")
         ])
         kb.append([
-            Button.inline("➕ ADD RECIPIENT", "em_add_recip", style="primary"),
-            Button.inline("🗑 CLEAR RECIPIENTS", "em_clear_recip", style="danger")
+            Button.inline("➕ ADD RECIPIENT", "em_add_recip"),
+            Button.inline("🗑 CLEAR RECIPIENTS", "em_clear_recip")
         ])
         kb.append([
-            Button.inline("📊 LIVE STATS", "em_stats", style="primary"),
-            Button.inline("AGENCY", "em_agency", style="success")
+            Button.inline("📊 LIVE STATS", "em_stats"),
+            Button.inline("AGENCY", "em_agency")
         ])
-        kb.append([Button.inline("🔙 BACK TO MAIN MENU", "back_main", style="primary")])
+        kb.append([Button.inline("🔙 BACK TO MAIN MENU", "back_main")])
     return kb
 
 def force_channel_keyboard(user_id):
     lang = get_user_lang(user_id) or "fa"
     return [
         [
-            Button.inline("➕ افزودن کانال" if lang=="fa" else "➕ ADD CHANNEL", "em_fc_add", style="primary"),
-            Button.inline("➖ حذف کانال" if lang=="fa" else "➖ REMOVE CHANNEL", "em_fc_remove", style="danger")
+            Button.inline("➕ افزودن کانال" if lang=="fa" else "➕ ADD CHANNEL", "em_fc_add"),
+            Button.inline("➖ حذف کانال" if lang=="fa" else "➖ REMOVE CHANNEL", "em_fc_remove")
         ],
         [
-            Button.inline("📋 لیست کانال‌ها" if lang=="fa" else "📋 CHANNEL LIST", "em_fc_list", style="primary"),
-            Button.inline("🔙 بازگشت" if lang=="fa" else "🔙 BACK", "em_back", style="primary")
+            Button.inline("📋 لیست کانال‌ها" if lang=="fa" else "📋 CHANNEL LIST", "em_fc_list"),
+            Button.inline("🔙 بازگشت" if lang=="fa" else "🔙 BACK", "em_back")
         ]
     ]
 
@@ -608,30 +608,30 @@ def telegram_menu_keyboard(user_id):
     is_own = is_owner(user_id)
     kb = []
     kb.append([
-        Button.inline("🚫 ریپورت کانال/گروه" if lang=="fa" else "🚫 REPORT CHANNEL/GROUP", "tg_report", style="danger"),
-        Button.inline("📝 ریپورت پست" if lang=="fa" else "📝 REPORT POST", "tg_report_post", style="danger")
+        Button.inline("🚫 ریپورت کانال/گروه" if lang=="fa" else "🚫 REPORT CHANNEL/GROUP", "tg_report"),
+        Button.inline("📝 ریپورت پست" if lang=="fa" else "📝 REPORT POST", "tg_report_post")
     ])
     kb.append([
-        Button.inline("👤 ریپورت پروفایل" if lang=="fa" else "👤 REPORT PROFILE", "tg_report_profile", style="danger"),
-        Button.inline("🤖 ریپورت ربات" if lang=="fa" else "🤖 REPORT BOT", "tg_report_bot", style="danger")
+        Button.inline("👤 ریپورت پروفایل" if lang=="fa" else "👤 REPORT PROFILE", "tg_report_profile"),
+        Button.inline("🤖 ریپورت ربات" if lang=="fa" else "🤖 REPORT BOT", "tg_report_bot")
     ])
     kb.append([
-        Button.inline("👤 ریپورت اکانت" if lang=="fa" else "👤 REPORT ACCOUNT", "tg_report_account", style="danger"),
-        Button.inline("📋 ریپورت دستی" if lang=="fa" else "📋 MANUAL REPORT", "tg_manual_report", style="primary")
+        Button.inline("👤 ریپورت اکانت" if lang=="fa" else "👤 REPORT ACCOUNT", "tg_report_account"),
+        Button.inline("📋 ریپورت دستی" if lang=="fa" else "📋 MANUAL REPORT", "tg_manual_report")
     ])
     if is_own:
         kb.append([
-            Button.inline("⚙️ مدیریت اکانت‌ها" if lang=="fa" else "⚙️ MANAGE ACCOUNTS", "tg_manage_acc", style="primary"),
-            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")
+            Button.inline("⚙️ مدیریت اکانت‌ها" if lang=="fa" else "⚙️ MANAGE ACCOUNTS", "tg_manage_acc"),
+            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main")
         ])
     else:
         kb.append([
-            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc", style="success"),
-            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_shared", style="primary")
+            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc"),
+            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_shared")
         ])
         kb.append([
-            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc", style="danger"),
-            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")
+            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc"),
+            Button.inline("🔙 بازگشت به منوی اصلی" if lang=="fa" else "🔙 BACK TO MAIN MENU", "back_main")
         ])
     return kb
 
@@ -639,14 +639,14 @@ def manage_accounts_keyboard(user_id):
     lang = get_user_lang(user_id) or "fa"
     return [
         [
-            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc", style="success"),
-            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc", style="danger")
+            Button.inline("➕ افزودن اکانت" if lang=="fa" else "➕ ADD ACCOUNT", "tg_add_acc"),
+            Button.inline("🗑 حذف اکانت" if lang=="fa" else "🗑 DELETE ACCOUNT", "tg_del_acc")
         ],
         [
-            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_all", style="primary"),
-            Button.inline("📋 لیست اشتراکی" if lang=="fa" else "📋 LIST SHARED", "tg_list_shared", style="primary")
+            Button.inline("📋 لیست اکانت‌ها" if lang=="fa" else "📋 LIST ACCOUNTS", "tg_list_all"),
+            Button.inline("📋 لیست اشتراکی" if lang=="fa" else "📋 LIST SHARED", "tg_list_shared")
         ],
-        [Button.inline("🔙 بازگشت" if lang=="fa" else "🔙 BACK", "tg_back", style="primary")]
+        [Button.inline("🔙 بازگشت" if lang=="fa" else "🔙 BACK", "tg_back")]
     ]
 
 def reason_keyboard():
@@ -654,32 +654,32 @@ def reason_keyboard():
     row = []
     for i in range(1, 10):
         reason_name = REPORT_REASONS[str(i)][0]
-        row.append(Button.inline(reason_name, f"tg_reason_{i}", style="primary"))
+        row.append(Button.inline(reason_name, f"tg_reason_{i}"))
         if len(row) == 2:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-    buttons.append([Button.inline("🔙 Back", "tg_back", style="primary")])
+    buttons.append([Button.inline("🔙 Back", "tg_back")])
     return buttons
 
 def admin_duration_keyboard(lang):
     return [
         [
-            Button.inline("1 ساعت" if lang=="fa" else "1 hour", "adm_1h", style="primary"),
-            Button.inline("1 روز" if lang=="fa" else "1 day", "adm_1d", style="primary")
+            Button.inline("1 ساعت" if lang=="fa" else "1 hour", "adm_1h"),
+            Button.inline("1 روز" if lang=="fa" else "1 day", "adm_1d")
         ],
         [
-            Button.inline("1 هفته" if lang=="fa" else "1 week", "adm_1w", style="primary"),
-            Button.inline("1 ماه" if lang=="fa" else "1 month", "adm_1m", style="primary")
+            Button.inline("1 هفته" if lang=="fa" else "1 week", "adm_1w"),
+            Button.inline("1 ماه" if lang=="fa" else "1 month", "adm_1m")
         ],
         [
-            Button.inline("3 ماه" if lang=="fa" else "3 months", "adm_3m", style="primary"),
-            Button.inline("6 ماه" if lang=="fa" else "6 months", "adm_6m", style="primary")
+            Button.inline("3 ماه" if lang=="fa" else "3 months", "adm_3m"),
+            Button.inline("6 ماه" if lang=="fa" else "6 months", "adm_6m")
         ],
         [
-            Button.inline("1 سال" if lang=="fa" else "1 year", "adm_1y", style="success"),
-            Button.inline("🔙 برگشت" if lang=="fa" else "🔙 Back", "back_main", style="primary")
+            Button.inline("1 سال" if lang=="fa" else "1 year", "adm_1y"),
+            Button.inline("🔙 برگشت" if lang=="fa" else "🔙 Back", "back_main")
         ]
     ]
 
@@ -704,7 +704,7 @@ async def start_handler(event):
     lang = get_user_lang(user_id)
     if lang is None:
         buttons = [
-            [Button.inline("فارسی", "lang_fa", style="primary"), Button.inline("English", "lang_en", style="primary")]
+            [Button.inline("فارسی", "lang_fa"), Button.inline("English", "lang_en")]
         ]
         await event.reply("🌍 Please choose your language:\nلطفاً زبان خود را انتخاب کنید:", buttons=buttons)
         return
@@ -755,7 +755,7 @@ async def callback_handler(event):
 
     if data_str == "change_lang":
         buttons = [
-            [Button.inline("فارسی", "lang_fa", style="primary"), Button.inline("English", "lang_en", style="primary")]
+            [Button.inline("فارسی", "lang_fa"), Button.inline("English", "lang_en")]
         ]
         await event.edit("🌍 انتخاب زبان / Choose language:", buttons=buttons)
         return
@@ -840,7 +840,7 @@ async def callback_handler(event):
             f"تاریخ انقضا: {expires.strftime('%Y-%m-%d %H:%M:%S')}" if lang == "fa" else
             f"✅ Admin added for user {target_user}\n"
             f"Expires: {expires.strftime('%Y-%m-%d %H:%M:%S')}",
-            buttons=[[Button.inline("🔙 بازگشت به منوی اصلی" if lang == "fa" else "🔙 BACK TO MAIN MENU", "back_main", style="primary")]]
+            buttons=[[Button.inline("🔙 بازگشت به منوی اصلی" if lang == "fa" else "🔙 BACK TO MAIN MENU", "back_main")]]
         )
         USER_STATE.pop(user_id, None)
         return
@@ -870,28 +870,28 @@ async def email_callback(event, data, user_id, lang):
         smtp_list = admin_data.get("smtp", [])
         if not smtp_list:
             await event.edit("❌ SMTP ثبت نشده" if lang == "fa" else "❌ No SMTP found",
-                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
+                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")]])
             return
         kb = []
         row = []
         for smtp in smtp_list:
             email = smtp.get("email", "")
             if email:
-                row.append(Button.inline(email, f"em_smtp_view_{email}", style="primary"))
+                row.append(Button.inline(email, f"em_smtp_view_{email}"))
                 if len(row) == 2:
                     kb.append(row)
                     row = []
         if row:
             kb.append(row)
-        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("📋 لیست SMTP", buttons=kb)
         return
 
     if data.startswith("em_smtp_view_"):
         email = data.replace("em_smtp_view_", "", 1)
         kb = [
-            [Button.inline("🗑 حذف" if lang == "fa" else "DELETE", f"em_smtp_del_{email}", style="danger")],
-            [Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_smtp_list", style="primary")]
+            [Button.inline("🗑 حذف" if lang == "fa" else "DELETE", f"em_smtp_del_{email}")],
+            [Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_smtp_list")]
         ]
         await event.edit(f"📧 {email}\n\nحذف شود؟" if lang == "fa" else f"📧 {email}\n\nDelete?",
                         buttons=kb)
@@ -904,19 +904,19 @@ async def email_callback(event, data, user_id, lang):
         smtp_list = admin_data["smtp"]
         if not smtp_list:
             await event.edit("✅ حذف شد\n📭 لیست خالی" if lang == "fa" else "✅ Deleted\nEmpty list",
-                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
+                           buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")]])
             return
         kb = []
         row = []
         for s in smtp_list:
             em = s.get("email", "")
-            row.append(Button.inline(em, f"em_smtp_view_{em}", style="primary"))
+            row.append(Button.inline(em, f"em_smtp_view_{em}"))
             if len(row) == 2:
                 kb.append(row)
                 row = []
         if row:
             kb.append(row)
-        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("📋 لیست SMTP", buttons=kb)
         return
 
@@ -927,8 +927,8 @@ async def email_callback(event, data, user_id, lang):
         for s in smtp_list:
             email = s.get("email", "")
             status = "🟢" if email in active else "🔴"
-            kb.append([Button.inline(f"{status} {email}", f"em_toggle_{email}", style="success" if email in active else "primary")])
-        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+            kb.append([Button.inline(f"{status} {email}", f"em_toggle_{email}" if email in active else "primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
         return
 
@@ -944,8 +944,8 @@ async def email_callback(event, data, user_id, lang):
         for s in admin_data.get("smtp", []):
             em = s.get("email", "")
             status = "🟢" if em in active else "🔴"
-            kb.append([Button.inline(f"{status} {em}", f"em_toggle_{em}", style="success" if em in active else "primary")])
-        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")])
+            kb.append([Button.inline(f"{status} {em}", f"em_toggle_{em}" if em in active else "primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")])
         await event.edit("🟢 انتخاب SMTP فعال" if lang == "fa" else "🟢 Select active SMTP", buttons=kb)
         await event.answer("✅ وضعیت تغییر کرد" if lang == "fa" else "✅ Status changed")
         return
@@ -974,7 +974,7 @@ async def email_callback(event, data, user_id, lang):
     if data == "em_recips":
         recips = admin_data.get("recipients", [])
         text = "\n".join(recips) if recips else ("خالی" if lang == "fa" else "Empty")
-        await event.edit(text, buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back", style="primary")]])
+        await event.edit(text, buttons=[[Button.inline("🔙 بازگشت" if lang == "fa" else "BACK", "em_back")]])
         return
 
     if data == "em_stats":
@@ -1122,9 +1122,9 @@ async def telegram_callback(event, data, user_id, lang):
             btn_text = f"📱 +{phone} - {status}"
             kb.append([
                 Button.inline(btn_text, "noop"),
-                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}", style="danger")
+                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}")
             ])
-        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back")])
         await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
         return
 
@@ -1143,9 +1143,9 @@ async def telegram_callback(event, data, user_id, lang):
             btn_text = f"📱 +{phone} (Admin {admin_id}) - {status}"
             kb.append([
                 Button.inline(btn_text, "noop"),
-                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}", style="danger")
+                Button.inline("🗑", f"tg_delacc_{admin_id}_{phone}")
             ])
-        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back")])
         await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
         return
 
@@ -1192,9 +1192,9 @@ async def telegram_callback(event, data, user_id, lang):
             btn_text = f"📱 +{ph} - {st}"
             kb.append([
                 Button.inline(btn_text, "noop"),
-                Button.inline("🗑", f"tg_delacc_{a_id}_{ph}", style="danger")
+                Button.inline("🗑", f"tg_delacc_{a_id}_{ph}")
             ])
-        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back", style="primary")])
+        kb.append([Button.inline("🔙 بازگشت" if lang=="fa" else "BACK", "tg_back")])
         await event.edit("📋 لیست اکانت‌ها" if lang=="fa" else "📋 Accounts", buttons=kb)
         return
 
