@@ -81,18 +81,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if not authorized(self):
-            return
-
         try:
             parsed = urlparse(self.path)
 
-            if parsed.path == "/":
-                self.send_html(INDEX_HTML)
-                return
-
+            # Keep a public health endpoint so Railway can monitor this service
+            # without exposing dashboard data or credentials.
             if parsed.path == "/health":
                 self.send_json(200, {"status": "ok", "service": "reporter-dashboard"})
+                return
+
+            if not authorized(self):
+                return
+
+            if parsed.path == "/":
+                self.send_html(INDEX_HTML)
                 return
 
             if parsed.path == "/api/status":
