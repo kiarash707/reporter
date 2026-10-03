@@ -1,20 +1,21 @@
 # Reporter Dashboard
 
-Independent read-only monitoring dashboard for the Reporter Telegram bot.
+پنل عملیات زنده برای مدیریت و پایش سرویس Reporter.
 
-## Features
+## امکانات
 
-- مرکز عملیات زنده با وضعیت Telegram، پردازش پیام و زمان فعالیت
-- تشخیص Event Handler و شمارش /start، Callback و پیام خصوصی
-- Diagnostics داخلی برای Telegram، Handlers، Processing و Volume/Storage
-- مدیریت کاربران: مشاهده، جستجو، بلاک/آنبلاک و ارسال پیام
-- مدیریت مدیران و تاریخ انقضا
-- مدیریت کانال‌های اجباری
-- کنسول لاگ زنده با فیلتر سطح و ترجمه رخدادهای رایج
-- کنترل عملیاتی: فعال‌سازی، توقف پاسخ‌گویی و Restart
-- رابط RTL واکنش‌گرا با Glass UI، پس‌زمینه ذرات، انیمیشن، Pulse و Scan
-- بدون وابستگی به CDN یا سرویس خارجی در رابط کاربری
-- بروزرسانی خودکار وضعیت و لاگ‌ها
+- مرکز عملیات زنده با وضعیت Telegram، Processing، Handlerها و Storage
+- نمایش uptime، کاربران، مدیران، sessionها، کانال‌های اجباری و deployment
+- API latency و تشخیص داده‌های قدیمی/قطع ارتباط
+- بروزرسانی خودکار با توقف خودکار هنگام مخفی بودن تب برای کاهش مصرف منابع
+- مدیریت کاربران: جستجو، بلاک/آنبلاک و ارسال پیام
+- مدیریت مدیران با اعتبارسنجی تعداد روز
+- مدیریت کانال‌های اجباری با اعتبارسنجی username
+- کنسول لاگ زنده با فیلتر متن و سطح
+- کنترل پاسخ‌گویی و Restart
+- Diagnostics و وضعیت Volume / data.json / admin sessions
+- طراحی RTL واکنش‌گرا، Glass UI، انیمیشن و حالت کم‌مصرف با prefers-reduced-motion
+- بدون CDN یا وابستگی بیرونی در رابط
 
 ## Environment variables
 
@@ -24,6 +25,13 @@ MONITOR_TOKEN=<same token configured on reporter>
 DASHBOARD_USER=admin
 DASHBOARD_PASSWORD=<strong password>
 PORT=8080
+REQUEST_TIMEOUT=8
 ```
 
-The dashboard is intentionally a separate Railway service. If the dashboard service crashes or is redeployed, the Telegram bot remains independent.
+## Stability / security
+
+- سرویس Dashboard مستقل از Bot اجرا می‌شود.
+- endpoint عمومی `/health` برای Railway بدون احراز هویت است؛ سایر APIها نیازمند Basic Auth هستند.
+- داده‌های API با `Cache-Control: no-store` ارسال می‌شوند.
+- هدرهای امنیتی و محدودیت اندازه درخواست POST فعال است.
+- رابط در برابر timeout، قطعی موقت و خطاهای API حالت خطای کنترل‌شده دارد.
