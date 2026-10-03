@@ -40,6 +40,8 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 DATA_FILE = os.path.join(DATA_DIR, "data.json")
 ADMIN_SESSIONS_DIR = os.path.join(DATA_DIR, "admin_sessions")
+# The bot account is authenticated from BOT_TOKEN on every process start.
+# Do not reuse an old persistent MTProto bot session: it can belong to a different bot token.
 BOT_SESSION_PATH = os.path.join(DATA_DIR, "bot_session")
 
 os.makedirs(ADMIN_SESSIONS_DIR, exist_ok=True)
@@ -140,9 +142,13 @@ def load_data():
         for uid_str in list(data["admins"].keys()):
             info = data["admins"][uid_str]
             if isinstance(info.get("expires"), str):
-                info["expires"] = datetime.fromisoformat(info["expires"])
+                info["expires"] = _normalize_tehran_datetime(datetime.fromisoformat(info["expires"]))
+            else:
+                info["expires"] = _normalize_tehran_datetime(info.get("expires"))
             if isinstance(info.get("activated"), str):
-                info["activated"] = datetime.fromisoformat(info["activated"])
+                info["activated"] = _normalize_tehran_datetime(datetime.fromisoformat(info["activated"]))
+            else:
+                info["activated"] = _normalize_tehran_datetime(info.get("activated"))
     for uid_str in data.get("admins", {}):
         data.setdefault("admin_data", {}).setdefault(uid_str, {
             "smtp": [],
@@ -156,6 +162,26 @@ def load_data():
             "recipients": []
         })
     return data
+
+def _normalize_tehran_datetime(value):
+    if not isinstance(value, datetime):
+        return value
+    tehran = pytz.timezone("Asia/Tehran")
+    if value.tzinfo is None:
+        return tehran.localize(value)
+    return value.astimezone(tehran)
+
+
+def _is_active_expiry(expires, now_tehran=None):
+    try:
+        normalized = _normalize_tehran_datetime(expires)
+        if not isinstance(normalized, datetime):
+            return False
+        now = now_tehran or datetime.now(pytz.timezone("Asia/Tehran"))
+        return normalized > now
+    except Exception:
+        return False
+
 
 def save_data(data):
     data_to_save = data.copy()
@@ -174,11 +200,12 @@ def save_data(data):
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(data_to_save, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, DATA_FILE)
-    except:
+    except Exception:
+        logger.exception("Failed to persist bot data")
         try:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-        except:
+        except Exception:
             pass
 
 def is_owner(user_id):
@@ -193,7 +220,7 @@ def is_admin(user_id):
         tehran = pytz.timezone('Asia/Tehran')
         now = datetime.now(tehran)
         expires = admins[str(user_id)]["expires"]
-        return expires > now
+        return _is_active_expiry(expires, now)
     except:
         return False
 
@@ -297,7 +324,7 @@ def dashboard_user_snapshot():
         uid = int(raw_uid) if str(raw_uid).isdigit() else raw_uid
         info = admins.get(str(uid), {})
         expires = info.get("expires")
-        active_admin = isinstance(expires, datetime) and expires > now_tehran
+        active_admin = _is_active_expiry(expires, now_tehran)
         rows.append({
             "id": uid,
             "blocked": str(uid) in blocked,
@@ -324,7 +351,7 @@ def dashboard_admin_snapshot():
         if uid_str in seen:
             continue
         expires = info.get("expires")
-        active = isinstance(expires, datetime) and expires > now_tehran
+        active = _is_active_expiry(expires, now_tehran)
         rows.append({
             "id": int(uid_str) if uid_str.isdigit() else uid_str,
             "owner": False,
@@ -660,6 +687,7 @@ def admin_duration_keyboard(lang):
 
 async def start_handler(event):
     user_id = event.sender_id
+    logger.info("Incoming /start update from user_id=%s", user_id)
     touch_user(user_id)
     if not BOT_PROCESSING_ENABLED:
         await event.reply("⏸️ ربات موقتاً متوقف است. از داشبورد آن را فعال کنید.")
@@ -694,6 +722,7 @@ async def start_handler(event):
 
 async def callback_handler(event):
     data_str = event.data.decode('utf-8')
+    logger.info("Incoming callback update from user_id=%s", event.sender_id)
     if not BOT_PROCESSING_ENABLED:
         await event.answer("⏸️ ربات موقتاً متوقف است.", alert=True)
         return
@@ -1194,6 +1223,7 @@ async def telegram_callback(event, data, user_id, lang):
 # =============== MESSAGE HANDLERS ===============
 
 async def message_handler(event):
+    logger.info("Incoming private message update from user_id=%s state=%s", event.sender_id, USER_STATE.get(event.sender_id, {}).get("step"))
     if not BOT_PROCESSING_ENABLED:
         return
     touch_user(event.sender_id)
@@ -1872,7 +1902,7 @@ class MonitorHandler(BaseHTTPRequestHandler):
 
                 for info in admins.values():
                     try:
-                        if info.get("expires") and info["expires"] > now_tehran:
+                        if _is_active_expiry(info.get("expires"), now_tehran):
                             active_admins += 1
                     except Exception:
                         pass
@@ -2133,16 +2163,55 @@ async def main():
     BOT_LOOP = asyncio.get_running_loop()
     persisted = load_data()
     BOT_PROCESSING_ENABLED = persisted.get("bot_status", "on") != "off"
-    bot = TelegramClient(BOT_SESSION_PATH, API_ID, API_HASH)
+
+    # Register handlers before connecting so no update is missed during startup.
+    bot = TelegramClient(StringSession(), API_ID, API_HASH, receive_updates=True)
     bot_instance = bot
+    bot.add_event_handler(
+        start_handler,
+        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?
+    try:
+        await bot.run_until_disconnected()
+    finally:
+        if MONITOR_SERVER is not None:
+            try:
+                MONITOR_SERVER.shutdown()
+            except Exception:
+                pass
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by process signal")
+    except Exception:
+        logger.exception("FATAL: bot process stopped because of an unhandled exception")
+        raise
+)
+    )
+    bot.add_event_handler(callback_handler, events.CallbackQuery())
+    bot.add_event_handler(
+        message_handler,
+        events.NewMessage(incoming=True, func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/'))
+    )
+    logger.info("Telegram event handlers registered")
+
     await bot.start(bot_token=BOT_TOKEN)
+    me = await bot.get_me()
+    if not getattr(me, "bot", False):
+        raise RuntimeError("BOT_TOKEN authenticated as a non-bot Telegram account")
+    logger.info("Telegram bot identity verified: @%s (id=%s)", me.username or "unknown", me.id)
+
     BOT_STARTED_AT = datetime.now(pytz.UTC)
     MONITOR_SERVER = start_monitor_server()
-    logger.info("Bot started")
+    logger.info("Bot started; processing_enabled=%s", BOT_PROCESSING_ENABLED)
 
-    bot.add_event_handler(start_handler, events.NewMessage(pattern=r'/start(?: (.+))?'))
-    bot.add_event_handler(callback_handler, events.CallbackQuery())
-    bot.add_event_handler(message_handler, events.NewMessage(func=lambda e: e.is_private and not e.text.startswith('/')))
+    # Process any updates that arrived before the event loop became fully ready.
+    try:
+        await bot.catch_up()
+        logger.info("Telegram update catch-up completed")
+    except Exception:
+        logger.exception("Telegram update catch-up failed; continuing with live updates")
 
     logger.info("SHIKH REPORTER is running...")
     try:
