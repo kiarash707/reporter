@@ -62,8 +62,13 @@ except OSError:
     pass
 
 _log_file = os.path.join(DATA_DIR, "bot.log")
+_CONFIGURED_LOG_LEVEL = os.getenv("REPORTER_LOG_LEVEL", "INFO").upper()
+_LOG_LEVEL = getattr(logging, _CONFIGURED_LOG_LEVEL, logging.INFO)
+_TELETHON_LOG_LEVEL = os.getenv("REPORTER_TELETHON_LOG_LEVEL", "WARNING").upper()
+_TELETHON_LEVEL = getattr(logging, _TELETHON_LOG_LEVEL, logging.WARNING)
+
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=_LOG_LEVEL,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(_log_file, encoding='utf-8'),
@@ -72,6 +77,8 @@ logging.basicConfig(
     force=True
 )
 logger = logging.getLogger("reporter")
+logging.getLogger("telethon").setLevel(_TELETHON_LEVEL)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "")
 MONITOR_PORT = int(os.getenv("MONITOR_PORT", "8080"))
