@@ -131,3 +131,23 @@ python Reporter.py
 Secret واقعی را داخل GitHub commit نکنید. در Railway از Variables استفاده کنید.
 
 در صورت تعویض Bot Token یا Telegram API credentials، فقط Variables را در Railway تغییر دهید؛ نیازی به تغییر کد نیست.
+
+
+## مانیتورینگ و داشبورد
+
+برای نمایش وضعیت و لاگ‌های زنده، یک سرویس مستقل `reporter-dashboard` وجود دارد. سرویس داشبورد از طریق Private Networking به API داخلی ربات متصل می‌شود؛ خاموش یا خراب شدن داشبورد نباید سرویس Telegram را متوقف کند.
+
+متغیرهای مانیتورینگ ربات:
+
+```text
+MONITOR_TOKEN=...
+MONITOR_PORT=8080
+```
+
+دامنه فعلی داشبورد:
+
+```text
+https://reporter-dashboard-production.up.railway.app
+```
+
+این داشبورد با Basic Auth محافظت شده است.
