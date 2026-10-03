@@ -19,7 +19,9 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "no-referrer",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
 }
 
 with open(os.path.join(os.path.dirname(__file__), "index.html"), "r", encoding="utf-8") as f:
@@ -180,14 +182,40 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if parsed.path not in ["/api/control", "/api/users", "/api/admins", "/api/channels"]:
                 self.send_json(404, {"error": "not_found"})
                 return
-            raw = self.rfile.read(int(self.headers.get("Content-Length", "0") or "0"))
+            content_length = int(self.headers.get("Content-Length", "0") or "0")
+            if content_length < 0 or content_length > 64 * 1024:
+                self.send_json(413, {"ok": False, "error": "request_too_large"})
+                return
+            raw = self.rfile.read(content_length)
             payload = json.loads(raw.decode("utf-8") or "{}") if raw else {}
             data = bot_request(parsed.path, timeout=30, method="POST", payload=payload)
             self.send_json(200, data)
         except (HTTPError, URLError, TimeoutError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
             self.send_json(502, {"ok": False, "error": str(exc)[:180]})
+        except (BrokenPipeError, ConnectionResetError):
+            return
         except Exception as exc:
-            self.send_json(500, {"ok": False, "error": str(exc)[:180]})
+            try:
+                self.send_json(500, {"ok": False, "error": str(exc)[:180]})
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(20)
+
+    def do_HEAD(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            for key, value in SECURITY_HEADERS.items():
+                self.send_header(key, value)
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
 
     def log_message(self, format, *args):
         return
