@@ -161,11 +161,17 @@ def save_data(data):
                 info_copy["activated"] = info_copy["activated"].isoformat()
             admins_copy[uid_str] = info_copy
         data_to_save["admins"] = admins_copy
+    temp_file = DATA_FILE + ".tmp"
     try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
+        with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(data_to_save, f, ensure_ascii=False, indent=4)
+        os.replace(temp_file, DATA_FILE)
     except:
-        pass
+        try:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        except:
+            pass
 
 def is_owner(user_id):
     return user_id in OWNER_IDS
