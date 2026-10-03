@@ -467,6 +467,29 @@ body{overscroll-behavior-y:none}
 @media (prefers-reduced-motion:reduce){
   .mobile-dock{backdrop-filter:none}
 }
+/* v6 backup control center */
+.backup-hero{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}
+.backup-drop{
+  border:1px dashed rgba(255,92,110,.28);border-radius:18px;padding:18px;
+  background:linear-gradient(145deg,rgba(255,49,84,.045),rgba(110,168,255,.025));
+  transition:border-color .2s,transform .2s
+}
+.backup-drop:hover{border-color:rgba(255,92,110,.55);transform:translateY(-1px)}
+.backup-drop.drag{border-color:rgba(85,214,255,.75);box-shadow:0 0 35px rgba(85,214,255,.08)}
+.backup-icon{font-size:34px;filter:drop-shadow(0 0 15px rgba(255,49,84,.34))}
+.backup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.backup-actions button{flex:1;min-width:150px}
+.file-name{font-size:11px;color:#dce6f3;word-break:break-all;margin-top:8px}
+.upload-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:12px}
+.upload-bar span{display:block;width:0;height:100%;background:linear-gradient(90deg,#ff3154,#8ee7ff);transition:width .12s}
+.backup-history{max-height:320px;overflow:auto}
+.backup-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.backup-row:last-child{border-bottom:0}
+.backup-row b{font-size:11px}.backup-row small{display:block;color:var(--muted);margin-top:3px}
+.restore-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border-radius:10px;border:1px solid rgba(69,227,154,.18);background:rgba(69,227,154,.035);font-size:10px}
+.restore-badge.warn{border-color:rgba(255,209,102,.18);background:rgba(255,209,102,.035)}
+@media(max-width:820px){.backup-hero{grid-template-columns:1fr}.backup-actions button{min-width:0}.backup-row{grid-template-columns:1fr auto}}
+@media(max-width:720px){.mobile-dock{grid-template-columns:repeat(6,1fr)}.mobile-dock button{font-size:9px;padding:8px 2px}.backup-drop{padding:14px}.backup-row{grid-template-columns:1fr}.backup-row button{width:100%}}
 </style>
 </head>
 <body>
@@ -505,6 +528,7 @@ body{overscroll-behavior-y:none}
       <button data-tab="channels" onclick="tab('channels')">◌ کانال‌ها</button>
       <button data-tab="logs" onclick="tab('logs')">⌘ لاگ زنده</button>
       <button data-tab="analytics" onclick="tab('analytics')">◈ تحلیل زنده</button>
+      <button data-tab="backup" onclick="tab('backup')">⬡ بکاپ</button>
       <button data-tab="system" onclick="tab('system')">⚙ سیستم</button>
     </nav>
   </div>
@@ -751,6 +775,68 @@ body{overscroll-behavior-y:none}
     </div>
   </section>
 
+  <section class="tab" id="tab-backup">
+    <div class="grid">
+      <div class="card kpi">
+        <div class="label">BACKUP FORMAT</div><div id="backupFormat" class="value" style="font-size:18px">R1</div>
+        <div class="notice">نسخه فرمت قابل اعتبارسنجی و قابل بازیابی</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">BACKUP HISTORY</div><div id="backupCount" class="value">—</div>
+        <div class="notice">آخرین Snapshotهای نگهداری‌شده</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">SOURCE OVERRIDE</div><div id="restoreSourceState" class="value" style="font-size:18px">—</div>
+        <div class="notice">سورس restore‌شده در Boot بعدی</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">LATEST BACKUP</div><div id="latestBackupSize" class="value" style="font-size:18px">—</div>
+        <div id="latestBackupDate" class="notice">—</div>
+      </div>
+    </div>
+
+    <div class="backup-hero section">
+      <div class="card">
+        <div class="title"><h2>⬡ FULL BACKUP</h2><span class="meta">Zero-to-full • داده + Session + Source</span></div>
+        <div class="backup-drop" id="backupDrop">
+          <div class="backup-icon">🗄️</div>
+          <h3 style="margin:8px 0 6px">پشتیبان کامل ربات</h3>
+          <div class="notice">فایل ZIP شامل وضعیت پایدار ربات، data، sessionها و snapshot سورس مستقرشده است. Secretهای محیطی داخل فایل قرار نمی‌گیرند؛ اما session و SMTPهای ذخیره‌شده در data ممکن است حساس باشند.</div>
+          <div class="backup-actions">
+            <button onclick="downloadFullBackup()">⇩ دریافت بکاپ کامل</button>
+            <button onclick="document.getElementById('backupFile').click()">⇧ انتخاب بکاپ برای آپلود</button>
+          </div>
+          <input id="backupFile" type="file" accept=".zip,application/zip,application/octet-stream" style="display:none">
+          <div id="backupFileName" class="file-name">فایلی انتخاب نشده است.</div>
+          <div class="backup-actions">
+            <label class="restore-badge"><input id="activateSource" type="checkbox" checked> بعد از Restore، سورس داخل بکاپ فعال شود</label>
+            <label class="restore-badge warn"><input id="dryRun" type="checkbox"> فقط اعتبارسنجی (بدون تغییر)</label>
+          </div>
+          <div class="upload-bar" aria-hidden="true"><span id="uploadProgress"></span></div>
+          <div id="backupMsg" class="notice" style="margin-top:9px">آماده.</div>
+          <div class="backup-actions">
+            <button id="restoreBtn" onclick="restoreBackup()">♻️ Restore و راه‌اندازی مجدد</button>
+            <button id="revertSourceBtn" onclick="revertRestoredSource()">↩ بازگشت به سورس مستقرشده</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><h2>🛡 RESTORE GUARD</h2><span class="meta">Integrity + rollback safety</span></div>
+        <div class="metric"><span>Manifest</span><span id="backupManifestState">—</span></div>
+        <div class="metric"><span>Checksum</span><span id="backupChecksumState">—</span></div>
+        <div class="metric"><span>Pre-restore safety backup</span><span id="safetyBackupState">خودکار</span></div>
+        <div class="metric"><span>Restart</span><span>خودکار بعد از Restore</span></div>
+        <div class="notice" style="margin-top:10px">Restore فقط فایل ZIP تولیدشده توسط همین سیستم را می‌پذیرد، مسیرهای خطرناک و فایل‌های دستکاری‌شده رد می‌شوند و قبل از تغییر یک safety backup ساخته می‌شود.</div>
+      </div>
+    </div>
+
+    <div class="card section">
+      <div class="title"><h2>🗃 تاریخچه بکاپ‌ها</h2><span class="meta" id="backupHistoryMeta">در حال دریافت...</span></div>
+      <div id="backupHistory" class="backup-history"><div class="empty">در حال دریافت...</div></div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-system">
     <div class="grid">
       <div class="card kpi"><div class="label">Service</div><div id="service" class="value" style="font-size:18px">—</div></div>
@@ -786,6 +872,7 @@ body{overscroll-behavior-y:none}
   <button data-mobile-tab="users" onclick="tab('users')">◉<br>کاربران</button>
   <button data-mobile-tab="logs" onclick="tab('logs')">⌘<br>لاگ</button>
   <button data-mobile-tab="analytics" onclick="tab('analytics')">◌<br>تحلیل</button>
+  <button data-mobile-tab="backup" onclick="tab('backup')">⬡<br>بکاپ</button>
   <button data-mobile-tab="system" onclick="tab('system')">⚙<br>سیستم</button>
 </div>
 <script>
@@ -833,6 +920,7 @@ function tab(name,save=true){
   if(name==="channels")loadChannels();
   if(name==="logs")loadLogs();
   if(name==="analytics")renderAnalytics();
+  if(name==="backup"){loadBackupInfo();loadBackupHistory();}
   document.querySelectorAll("[data-mobile-tab]").forEach(x=>x.classList.toggle("active",x.dataset.mobileTab===name));
 }
 function fmtUptime(sec){
@@ -1238,6 +1326,96 @@ function exportSnapshot(){
   downloadText("reporter-snapshot.json",JSON.stringify(payload,null,2));
   showToast("Snapshot وضعیت آماده شد");
 }
+function fmtBytes(n){
+  const x=Number(n||0); if(!x)return "0 B";
+  const units=["B","KB","MB","GB"]; const i=Math.min(units.length-1,Math.floor(Math.log(x)/Math.log(1024)));
+  return (x/Math.pow(1024,i)).toFixed(i?2:0)+" "+units[i];
+}
+async function loadBackupInfo(){
+  try{
+    const j=await apiFetch("/api/backup/info",{timeout:12000,retries:1});
+    $("backupFormat").textContent="R"+(j.format_version??"1");
+    $("backupCount").textContent=Number(j.backup_count||0).toLocaleString("fa-IR");
+    $("restoreSourceState").textContent=j.restore_source_active?"ACTIVE":"DEPLOYED";
+    $("restoreSourceState").className="value "+(j.restore_source_active?"warn":"good");
+    const latest=j.latest_backup;
+    $("latestBackupSize").textContent=latest?fmtBytes(latest.size_bytes):"—";
+    $("latestBackupDate").textContent=latest?fmtDate(latest.created_at):"هنوز بکاپی ساخته نشده";
+    $("backupManifestState").textContent=j.format_version?"VALID FORMAT":"UNKNOWN";
+    $("backupManifestState").className=j.format_version?"good":"warn";
+    $("backupChecksumState").textContent=latest?"SHA-256 VERIFIED":"—";
+  }catch(e){
+    $("backupMsg").textContent="خطا در دریافت وضعیت بکاپ: "+e.message;
+  }
+}
+async function loadBackupHistory(){
+  try{
+    const j=await apiFetch("/api/backup/history",{timeout:12000,retries:1});
+    const rows=j.backups||[];
+    $("backupHistoryMeta").textContent=rows.length+" snapshot";
+    $("backupHistory").innerHTML=rows.map(x=>'<div class="backup-row"><div><b>'+esc(x.name)+'</b><small>'+esc(fmtBytes(x.size_bytes))+' • '+esc(fmtDate(x.created_at))+'</small></div><span class="restore-badge">SAFE</span><button class="mini" onclick="downloadExistingBackup('+JSON.stringify(x.name).replace(/"/g,"&quot;")+')">⇩ دریافت</button></div>').join("")||'<div class="empty">هنوز بکاپی در تاریخچه نیست.</div>';
+  }catch(e){$("backupHistory").innerHTML='<div class="empty">❌ '+esc(e.message)+'</div>';}
+}
+function downloadFullBackup(){
+  $("backupMsg").textContent="در حال ساخت و آماده‌سازی بکاپ کامل...";
+  window.location.href="/api/backup/download";
+  setTimeout(()=>{loadBackupInfo();loadBackupHistory();$("backupMsg").textContent="درخواست دریافت بکاپ ارسال شد.";},1200);
+}
+function downloadExistingBackup(name){
+  window.location.href="/api/backup/download-existing?name="+encodeURIComponent(name);
+}
+function selectedBackup(){
+  return $("backupFile")?.files?.[0]||null;
+}
+async function restoreBackup(){
+  const file=selectedBackup();
+  if(!file){showToast("اول فایل ZIP بکاپ را انتخاب کنید",false);return;}
+  const activate=$("activateSource").checked?"1":"0";
+  const dry=$("dryRun").checked?"1":"0";
+  if(!dry && !confirm("این عملیات داده‌های ربات را با بکاپ جایگزین می‌کند و سرویس Restart می‌شود. ادامه می‌دهید؟"))return;
+  const btn=$("restoreBtn");btn.disabled=true;
+  $("backupMsg").textContent=dry?"در حال اعتبارسنجی بکاپ...":"در حال آپلود و Restore امن...";
+  $("uploadProgress").style.width="0%";
+  try{
+    const result=await new Promise((resolve,reject)=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open("POST","/api/backup/restore?activate_source="+activate+"&dry_run="+dry,true);
+      xhr.setRequestHeader("Content-Type","application/zip");
+      xhr.responseType="text";
+      xhr.upload.onprogress=e=>{if(e.lengthComputable)$("uploadProgress").style.width=Math.round(e.loaded/e.total*100)+"%";};
+      xhr.onerror=()=>reject(new Error("آپلود به داشبورد شکست خورد"));
+      xhr.onload=()=>{
+        let j={};try{j=JSON.parse(xhr.responseText||"{}");}catch{}
+        if(xhr.status>=200&&xhr.status<300&&j.ok!==false)resolve(j);
+        else reject(new Error(j.error||"Restore شکست خورد"));
+      };
+      xhr.send(file);
+    });
+    if(result.dry_run){
+      $("backupMsg").textContent="✅ اعتبارسنجی موفق بود؛ هیچ تغییری انجام نشد.";
+      showToast("Backup سالم و قابل Restore است");
+    }else{
+      $("backupMsg").textContent="✅ Restore انجام شد. سرویس در حال Restart است...";
+      showToast("Restore انجام شد؛ ربات در حال راه‌اندازی مجدد است");
+      setTimeout(()=>{loadStatus();loadDiagnostics();loadBackupInfo();loadBackupHistory();},5000);
+    }
+  }catch(e){
+    $("backupMsg").textContent="❌ "+e.message;
+    showToast(e.message,false);
+  }finally{
+    btn.disabled=false;
+  }
+}
+async function revertRestoredSource(){
+  if(!confirm("سورس Restore‌شده غیرفعال و سورس مستقرشده فعال شود؟"))return;
+  try{
+    const j=await postApi("/api/backup/revert-source",{});
+    $("backupMsg").textContent=j.message||"در حال بازگشت...";
+    showToast(j.message||"بازگشت انجام شد");
+    setTimeout(()=>{loadStatus();loadDiagnostics();loadBackupInfo();},5000);
+  }catch(e){showToast(e.message,false);$("backupMsg").textContent=e.message;}
+}
+
 async function copyDiagnostics(){
   const payload=lastDiagnostics||lastStatus||{};
   try{await navigator.clipboard.writeText(JSON.stringify(payload,null,2));showToast("Diagnostics کپی شد");}
@@ -1255,6 +1433,7 @@ document.addEventListener("fullscreenchange",()=>{
 async function refreshAll(show=true){
   const started=performance.now();
   const jobs=[loadStatus(),loadDiagnostics()];
+  if(tabName==="backup")jobs.push(loadBackupInfo(),loadBackupHistory());
   if(tabName==="overview"||tabName==="logs")jobs.push(loadLogs(false));
   if(tabName==="users")jobs.push(loadUsers());
   if(tabName==="admins")jobs.push(loadAdmins());
@@ -1282,6 +1461,24 @@ function startTimers(){
 document.addEventListener("visibilitychange",startTimers);
 $("logFilter").addEventListener("input",()=>renderLogs(cachedLogs));
 $("userSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadUsers();});
+$("backupFile")?.addEventListener("change",()=>{
+  const file=selectedBackup();
+  $("backupFileName").textContent=file?file.name+" • "+fmtBytes(file.size):"فایلی انتخاب نشده است.";
+});
+(function initBackupDrop(){
+  const drop=$("backupDrop"); if(!drop)return;
+  ["dragenter","dragover"].forEach(type=>drop.addEventListener(type,e=>{e.preventDefault();drop.classList.add("drag");}));
+  ["dragleave","drop"].forEach(type=>drop.addEventListener(type,e=>{e.preventDefault();drop.classList.remove("drag");}));
+  drop.addEventListener("drop",e=>{
+    const file=[...(e.dataTransfer.files||[])][0];
+    if(file&&/zip$/i.test(file.name)){
+      try{
+        const dt=new DataTransfer();dt.items.add(file);$("backupFile").files=dt.files;
+        $("backupFileName").textContent=file.name+" • "+fmtBytes(file.size);
+      }catch{}
+    }else showToast("فقط فایل ZIP بکاپ مجاز است",false);
+  });
+})();
 document.addEventListener("keydown",e=>{
   if(e.target.matches("input,textarea"))return;
   if(e.key.toLowerCase()==="r"){e.preventDefault();refreshAll();}
