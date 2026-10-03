@@ -64,6 +64,14 @@ BOT_STARTED_AT = None
 MONITOR_SERVER = None
 BOT_LOOP = None
 BOT_PROCESSING_ENABLED = True
+BOT_USERNAME = ""
+HANDLERS_REGISTERED = False
+LAST_EVENT_AT = None
+LAST_EVENT_TYPE = None
+LAST_EVENT_USER_ID = None
+LAST_HANDLER_ERROR = None
+EVENT_COUNTS = {"start": 0, "callback": 0, "message": 0}
+HANDLER_ERRORS = {"start": 0, "callback": 0, "message": 0}
 
 REPORT_REASONS = {
     '1': ('🚫 Spam', InputReportReasonSpam(), 'This content is spam'),
@@ -304,6 +312,78 @@ def clear_user_cache(user_id=None):
                 delattr(get_user_sessions, attr)
 
 USER_STATE = {}
+
+def record_event(event_type, user_id=None):
+    global LAST_EVENT_AT, LAST_EVENT_TYPE, LAST_EVENT_USER_ID
+    LAST_EVENT_AT = datetime.now(pytz.UTC)
+    LAST_EVENT_TYPE = event_type
+    LAST_EVENT_USER_ID = user_id
+    if event_type in EVENT_COUNTS:
+        EVENT_COUNTS[event_type] += 1
+
+
+def record_handler_error(handler_name):
+    global LAST_HANDLER_ERROR
+    if handler_name in HANDLER_ERRORS:
+        HANDLER_ERRORS[handler_name] += 1
+    LAST_HANDLER_ERROR = {
+        "handler": handler_name,
+        "at": datetime.now(pytz.UTC).isoformat(),
+    }
+
+
+async def protected_handler(handler_name, handler, event, callback=False):
+    try:
+        await handler(event)
+    except Exception:
+        record_handler_error(handler_name)
+        logger.exception("Unhandled exception in %s handler", handler_name)
+        if callback:
+            try:
+                await event.answer("⚠️ خطای داخلی؛ دوباره تلاش کنید.", alert=True)
+            except Exception:
+                pass
+        else:
+            try:
+                await event.reply("⚠️ خطای داخلی ربات رخ داد. لطفاً دوباره تلاش کنید.")
+            except Exception:
+                pass
+
+
+def diagnostics_snapshot():
+    storage = {
+        "data_dir": DATA_DIR,
+        "data_file_exists": os.path.exists(DATA_FILE),
+        "data_file_writable": os.access(DATA_DIR, os.W_OK),
+        "admin_sessions_dir_exists": os.path.isdir(ADMIN_SESSIONS_DIR),
+        "admin_sessions_writable": os.access(ADMIN_SESSIONS_DIR, os.W_OK),
+    }
+    bot_connected = False
+    try:
+        bot_connected = bool(bot_instance.is_connected())
+    except Exception:
+        pass
+    return {
+        "service": os.getenv("RAILWAY_SERVICE_NAME", "reporter"),
+        "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "production"),
+        "region": os.getenv("RAILWAY_REGION", ""),
+        "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
+        "bot_username": BOT_USERNAME,
+        "bot_user_id": LAST_EVENT_USER_ID if LAST_EVENT_TYPE == "start" else None,
+        "telegram_connected": bot_connected,
+        "processing_enabled": BOT_PROCESSING_ENABLED,
+        "handlers_registered": HANDLERS_REGISTERED,
+        "last_event_at": LAST_EVENT_AT.isoformat() if LAST_EVENT_AT else None,
+        "last_event_type": LAST_EVENT_TYPE,
+        "last_event_user_id": LAST_EVENT_USER_ID,
+        "event_counts": dict(EVENT_COUNTS),
+        "handler_errors": dict(HANDLER_ERRORS),
+        "last_handler_error": LAST_HANDLER_ERROR,
+        "uptime_seconds": max(0, int((datetime.now(pytz.UTC) - BOT_STARTED_AT).total_seconds())) if BOT_STARTED_AT else 0,
+        "sessions": _session_count(),
+        "storage": storage,
+    }
+
 
 def set_bot_processing(enabled):
     global BOT_PROCESSING_ENABLED
@@ -687,6 +767,7 @@ def admin_duration_keyboard(lang):
 
 async def start_handler(event):
     user_id = event.sender_id
+    record_event("start", user_id)
     logger.info("Incoming /start update from user_id=%s", user_id)
     touch_user(user_id)
     if not BOT_PROCESSING_ENABLED:
@@ -721,6 +802,7 @@ async def start_handler(event):
     )
 
 async def callback_handler(event):
+    record_event("callback", event.sender_id)
     data_str = event.data.decode('utf-8')
     logger.info("Incoming callback update from user_id=%s", event.sender_id)
     if not BOT_PROCESSING_ENABLED:
@@ -1223,6 +1305,7 @@ async def telegram_callback(event, data, user_id, lang):
 # =============== MESSAGE HANDLERS ===============
 
 async def message_handler(event):
+    record_event("message", event.sender_id)
     logger.info("Incoming private message update from user_id=%s state=%s", event.sender_id, USER_STATE.get(event.sender_id, {}).get("step"))
     if not BOT_PROCESSING_ENABLED:
         return
@@ -1924,6 +2007,14 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "status": "online",
                     "telegram_connected": telegram_connected,
                     "started_at": BOT_STARTED_AT.isoformat() if BOT_STARTED_AT else None,
+                    "bot_username": BOT_USERNAME,
+                    "handlers_registered": HANDLERS_REGISTERED,
+                    "last_event_at": LAST_EVENT_AT.isoformat() if LAST_EVENT_AT else None,
+                    "last_event_type": LAST_EVENT_TYPE,
+                    "last_event_user_id": LAST_EVENT_USER_ID,
+                    "event_counts": dict(EVENT_COUNTS),
+                    "handler_errors": dict(HANDLER_ERRORS),
+                    "last_handler_error": LAST_HANDLER_ERROR,
                     "uptime_seconds": uptime_seconds,
                     "users": len(data.get("users", [])),
                     "admins": len(admins),
@@ -1942,6 +2033,10 @@ class MonitorHandler(BaseHTTPRequestHandler):
                     "deployment_id": os.getenv("RAILWAY_DEPLOYMENT_ID", ""),
                     "monitor_port": MONITOR_PORT
                 })
+                return
+
+            if parsed.path == "/api/diagnostics":
+                self._send_json(200, diagnostics_snapshot())
                 return
 
             if parsed.path == "/api/users":
@@ -2159,7 +2254,7 @@ def start_monitor_server():
 
 
 async def main():
-    global bot, bot_instance, BOT_STARTED_AT, MONITOR_SERVER, BOT_LOOP, BOT_PROCESSING_ENABLED
+    global bot, bot_instance, BOT_STARTED_AT, MONITOR_SERVER, BOT_LOOP, BOT_PROCESSING_ENABLED, BOT_USERNAME, HANDLERS_REGISTERED
     BOT_LOOP = asyncio.get_running_loop()
     persisted = load_data()
     BOT_PROCESSING_ENABLED = persisted.get("bot_status", "on") != "off"
@@ -2168,17 +2263,59 @@ async def main():
     bot = TelegramClient(StringSession(), API_ID, API_HASH, receive_updates=True)
     bot_instance = bot
     bot.add_event_handler(
-        start_handler,
-        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?$')
+        lambda event: protected_handler("start", start_handler, event),
+        events.NewMessage(incoming=True, pattern=r'^/start(?:@\w+)?(?:\s+(.+))?
+
+    await bot.start(bot_token=BOT_TOKEN)
+    me = await bot.get_me()
+    if not getattr(me, "bot", False):
+        raise RuntimeError("BOT_TOKEN authenticated as a non-bot Telegram account")
+    BOT_USERNAME = me.username or ""
+    logger.info("Telegram bot identity verified: @%s (id=%s)", me.username or "unknown", me.id)
+
+    BOT_STARTED_AT = datetime.now(pytz.UTC)
+    MONITOR_SERVER = start_monitor_server()
+    logger.info("Bot started; processing_enabled=%s", BOT_PROCESSING_ENABLED)
+
+    # Process any updates that arrived before the event loop became fully ready.
+    try:
+        await bot.catch_up()
+        logger.info("Telegram update catch-up completed")
+    except Exception:
+        logger.exception("Telegram update catch-up failed; continuing with live updates")
+
+    logger.info("SHIKH REPORTER is running...")
+    try:
+        await bot.run_until_disconnected()
+    finally:
+        if MONITOR_SERVER is not None:
+            try:
+                MONITOR_SERVER.shutdown()
+            except Exception:
+                pass
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by process signal")
+    except Exception:
+        logger.exception("FATAL: bot process stopped because of an unhandled exception")
+        raise
+)
     )
-    bot.add_event_handler(callback_handler, events.CallbackQuery())
     bot.add_event_handler(
-        message_handler,
+        lambda event: protected_handler("callback", callback_handler, event, callback=True),
+        events.CallbackQuery()
+    )
+    bot.add_event_handler(
+        lambda event: protected_handler("message", message_handler, event),
         events.NewMessage(
             incoming=True,
             func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
         )
     )
+    HANDLERS_REGISTERED = True
     logger.info("Telegram event handlers registered")
 
     await bot.start(bot_token=BOT_TOKEN)
