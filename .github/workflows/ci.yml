@@ -43,8 +43,11 @@ jobs:
           shutil.rmtree(root, ignore_errors=True)
           PY
 
+  # The dashboard implementation was removed from the current main tree.
+  # Run its legacy checks only on pushes to the dedicated dashboard branch,
+  # where server.py and index.html are expected to exist.
   dashboard:
-    if: github.ref == 'refs/heads/dashboard' || github.event_name == 'pull_request'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dashboard'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
